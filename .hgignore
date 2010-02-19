@@ -1,0 +1,6 @@
+syntax:glob
+
+*.pyc
+*.doit.db
+reference
+ast2html/python-asdl.html
