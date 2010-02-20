@@ -8,59 +8,73 @@ def file2ast(file_name):
     return ast.parse(text, file_name)
 
 
-def get_ast_data(node):
-    assert isinstance(node, ast.AST)
-    data = {}
-    data['class'] = node.__class__.__name__
-    data['attributes'] = list((name, getattr(node, name)) for name in node._attributes)
-    data['single'] = [] # node
-    data['childs'] = [] # *node
-    data['terminal'] = [] # type
-    for field_name in node._fields:
-        field = getattr(node, field_name)
-        if isinstance(field, ast.AST):
-            data['single'].append([field_name, get_ast_data(field)])
-        elif isinstance(field, list):
-            node_list = [get_ast_data(n) for n in field]
-            data['childs'].append([field_name, node_list])
-        else:
-            data['terminal'].append((field_name, repr(field)))
-    return data
+class AstNode(object):
+    """friendly AST class"""
 
+    class AstField(object):
+        pass
 
-def node2txt(node):
-    def print_node(d):
-        # expand child nodes
-        for ch in d['childs']:
-            ch[1] = "[%s]" % ", ".join((print_node(n) for n in ch[1]))
-        for si in d['single']:
-            si[1] = print_node(si[1])
-        all = d['attributes'] + d['terminal'] + d['single'] + d['childs']
-        content = " ,".join(("%s=%s" % (a[0],a[1]) for a in all))
-        return "%s(%s)" % (d['class'], content)
-    data = get_ast_data(node)
-    return print_node(data)
+    class TypeField(AstField):
+        def __init__(self, value):
+            self._value = value
+        def to_text(self):
+            return repr(self._value)
+        def to_html(self):
+            return repr(self._value)
 
+    class NodeField(AstField):
+        def __init__(self, value):
+            self._value = AstNode(value)
+        def to_text(self):
+            return self._value.to_text()
+        def to_html(self):
+            return self._value.to_html()
 
-def node2html(node):
-    def print_node(d):
-        for ch in d['childs']:
-            ch[1] = "\n".join((print_node(n) for n in ch[1]))
-        for si in d['single']:
-            si[1] = print_node(si[1])
-        all = d['terminal'] + d['single'] + d['childs']
-        nh = "<div> %s => %s </div>"
-        att = ", ".join(("%s=%s" % (a[0],a[1]) for a in d['attributes']))
-        content = "\n".join((nh % (a[0],a[1]) for a in all))
-        return "<div>%s (%s)<div>%s</div></div>" % (d['class'], att, content)
-    data = get_ast_data(node)
-    return print_node(data)
+    class ListField(AstField):
+        def __init__(self, value):
+            self._value = [AstNode(n) for n in value]
+        def to_text(self):
+            return "[%s]" % ", ".join((n.to_text() for n in self._value))
+        def to_html(self):
+            return "".join((n.to_html() for n in self._value))
+
+    def __init__(self, node):
+        self.class_ = node.__class__.__name__
+        self.attrs = [(name, getattr(node, name)) for name in node._attributes]
+        self.fields = {}
+        for name in node._fields:
+            value = getattr(node, name)
+            if isinstance(value, ast.AST):
+                self.fields[name] = self.NodeField(value)
+            elif isinstance(value, list):
+                self.fields[name] = self.ListField(value)
+            else:
+                self.fields[name] = self.TypeField(value)
+
+    def to_text(self):
+        attrs = ["%s=%s" % (k, v) for k,v in self.attrs]
+        fields = ["%s=%s" % (k, v.to_text()) for k,v in self.fields.iteritems()]
+        return "%s(%s)" % (self.class_, ", ".join(attrs + fields))
+
+    def to_html(self):
+        attrs = ("%s=%s" % (k, v) for k,v in self.attrs)
+        field_t = "<div> %s => %s </div>"
+        fields = (field_t % (k, v.to_html()) for k,v in self.fields.iteritems())
+        node_t = "<div>%s (%s)<div>%s</div></div>"
+        return node_t % (self.class_, ", ".join(attrs), "\n".join(fields))
 
 
 if __name__ == "__main__":
     ct = file2ast('sample.py')
-    #print node2txt(ct)
+    tree = AstNode(ct)
+
+    #
+    #print tree.to_text()
+    #print "----------------"
+    #print ast.dump(ct, include_attributes=True)
+
+
     print '<html><body>'
-    print node2html(ct)
+    print tree.to_html()
     print '</body></html>'
 
