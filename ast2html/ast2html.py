@@ -1,18 +1,6 @@
 import myast as ast
 
 
-def file2ast(file_name):
-    fp = open(file_name, 'r')
-    text = fp.read()
-    fp.close()
-    return ast.parse(text, file_name)
-
-def file2lines(file_name):
-    fp = open(file_name, 'r')
-    lines = fp.readlines()
-    fp.close()
-    return lines
-
 MAP = {'Assert':'stmt',
        'Assign':'stmt',
        'AugAssign': 'stmt',
@@ -42,9 +30,22 @@ MAP = {'Assert':'stmt',
 
 
 class AstNode(object):
-    """friendly AST class"""
+    """friendly AST class
+
+    @ivar node: stdlib AST node
+    @ivar path: python variable's "path" to this node
+    @ivar lines: node location on file
+    @ivar class_: AST type
+    @ivar attrs
+    @ivar fields
+    """
 
     class AstField(object):
+        """There are 3 basic kinds of AST fields
+         * TypeField - contains a basic type (not an AST node/element)
+         * NodeField - contains a single AST element
+         * ListField - contains a list of AST elements
+        """
         pass
 
     class TypeField(AstField):
@@ -113,11 +114,17 @@ class AstNode(object):
                 self.fields[name] = self.TypeField(value, f_path, lines)
 
     def to_text(self):
+        """dumps node info in plain text
+        @returns string
+        """
         attrs = ["%s=%s" % (k, v) for k,v in self.attrs]
         fields = ["%s=%s" % (k, v.to_text()) for k,v in self.fields.iteritems()]
         return "%s(%s)" % (self.class_, ", ".join(attrs + fields))
 
     def to_html(self):
+        """dumps node in HTML
+        @returns string
+        """
         css = MAP.get(self.class_, "")
         attrs = ("%s" % v for k,v in self.attrs)
 
@@ -160,23 +167,55 @@ class AstNode(object):
             items.extend(f.to_map())
         return items
 
-if __name__ == "__main__":
-    import sys
-    filename = sys.argv[1]
+
+
+#####################################33
+
+
+
+def file2ast(file_name):
+    """get ast-tree from file_name"""
+    fp = open(file_name, 'r')
+    text = fp.read()
+    fp.close()
+    return ast.parse(text, file_name)
+
+def file2lines(file_name):
+    """get list of lines from file_name"""
+    fp = open(file_name, 'r')
+    lines = fp.readlines()
+    fp.close()
+    return lines
+
+
+def ast2txt(filename):
+    """dump file as plain text (same output as ast.dump)"""
     ct = file2ast(filename)
     lines = file2lines(filename)
     tree = AstNode(ct, '', lines)
 
-    #
-    #print tree.to_text()
+    print tree.to_text()
     #print "----------------"
     #print ast.dump(ct, include_attributes=True)
 
 
-    # map
-    #for x in tree.to_map():
-    #    print x
 
+def ast2map(filename):
+    """display variable path to node"""
+    ct = file2ast(filename)
+    lines = file2lines(filename)
+    tree = AstNode(ct, '', lines)
+
+    # map
+    for x in tree.to_map():
+        print x
+
+
+def ast2html(filename):
+    """pretty print ast in HTML"""
+    ct = file2ast(filename)
+    lines = file2lines(filename)
+    tree = AstNode(ct, '', lines)
 
     style = """
 * {font-size:small;}
@@ -197,3 +236,10 @@ if __name__ == "__main__":
     print tree.to_html()
     print '</body></html>'
 
+
+if __name__ == "__main__":
+    import sys
+    filename = sys.argv[1]
+    #ast2txt(filename)
+    #ast2map(filename)
+    ast2html(filename)
