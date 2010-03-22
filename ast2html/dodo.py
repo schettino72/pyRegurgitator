@@ -6,7 +6,7 @@ def task_asdl():
             'targets': ['python-asdl.html'],
             }
 
-SAMPLES = ['sample.py', 'sample2.py']
+SAMPLES = ['sample.py', 'sample2.py', 'sample3.py']
 def task_ast():
     for sample in SAMPLES:
         target = "%s.html" % sample

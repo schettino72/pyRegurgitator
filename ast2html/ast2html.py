@@ -1,31 +1,106 @@
 import myast as ast
 
 
-MAP = {'Assert':'stmt',
-       'Assign':'stmt',
-       'AugAssign': 'stmt',
-       'Break': 'stmt',
-       'ClassDef': 'stmt',
-       'Continue': 'stmt',
-       'Delete': 'stmt',
-       'Exec': 'stmt',
-       'Expr': 'stmt',
-       'For': 'stmt',
-       'FunctionDef': 'stmt',
-       'Global': 'stmt',
-       'If': 'stmt',
-       'Import': 'stmt',
-       'ImportFrom': 'stmt',
-       'Pass': 'stmt',
-       'Print': 'stmt',
-       'Raise': 'stmt',
-       'Return': 'stmt',
-       'TryExcept': 'stmt',
-       'TryFinally': 'stmt',
-       'While': 'stmt',
-       'With': 'stmt',
+MAP = {'Assert':
+           {'category':'stmt',
+            'order':('test','msg')},
+       'Assign':
+           {'category':'stmt',
+            'order':('targets','value')},
+       'AugAssign':
+           {'category':'stmt',
+            'order':('target','op','value')},
+       'Break':
+           {'category':'stmt'},
+       'ClassDef':
+           {'category':'stmt',
+            'order':('name','bases','decorator_list')},
+       'Continue':
+           {'category':'stmt'},
+       'Delete':
+           {'category':'stmt'},
+       'Exec':
+           {'category':'stmt',
+            'order':('locals','globals')},
+       'Expr':
+           {'category':'stmt'},
+       'For':
+           {'category':'stmt',
+            'order':('target','iter')},
+       'FunctionDef':
+           {'category':'stmt',
+            'order':('name','args','decorator_list')},
+       'Global':
+           {'category':'stmt'},
+       'If':
+           {'category':'stmt'},
+       'Import':
+           {'category':'stmt'},
+       'ImportFrom':
+           {'category':'stmt',
+            'order':('module', 'names', 'level')},
+       'Pass':
+           {'category':'stmt'},
+       'Print':
+           {'category':'stmt',
+            'order':('values','dest','nl')},
+       'Raise':
+           {'category':'stmt',
+            'order':('inst','type','tback')},
+       'Return':
+           {'category':'stmt'},
+       'TryExcept':
+           {'category':'stmt'},
+       'TryFinally':
+           {'category':'stmt'},
+       'While':
+           {'category':'stmt'},
+       'With':
+           {'category':'stmt',
+            'order':('context_expr','optional_vars')},
 
-       'Module': 'mod',
+       'Module':
+           {'category':'mod'},
+
+       # 21
+       'alias':
+           {'order':('name','asname')},
+       'arguments':
+           {'order':('args', 'defaults','vararg','kwarg')},
+       'Attribute':
+           {'order':('value','attr','ctx')},
+       'BinOp':
+           {'order':('op','left','right')},
+       'BoolOp':
+           {'order':('op','values')},
+       'Call':
+           {'order':('func','args','keywords','starargs','kwargs')},
+       'Compare':
+           {'order':('ops','left','comparators')},
+       'comprehension':
+           {'order':('target','iter','ifs')},
+       'Dict':
+           {'order':('keys','values')},
+       'excepthandler':
+           {'order':('type','name')},
+       'GeneratorExp':
+           {'order':('elt', 'generators')},
+       'keyword':
+           {'order':('arg','value')},
+       'List':
+           {'order':('elts','ctx')},
+       'ListComp':
+           {'order':('elt', 'generators')},
+       'Name':
+           {'order':('id','ctx')},
+       'Slice':
+           {'order':('lower','upper','step')},
+       'Subscript':
+           {'order':('value','slice','ctx')},
+       'Tuple':
+           {'order':('elts','ctx')},
+       'UnaryOp':
+           {'order':('op','operand')},
        }
 
 
@@ -125,14 +200,15 @@ class AstNode(object):
         """dumps node in HTML
         @returns string
         """
-        css = MAP.get(self.class_, "")
+        class_info = MAP.get(self.class_, {})
+        category = class_info.get('category', "")
         attrs = ("%s" % v for k,v in self.attrs)
 
         # divide fields into 2 groups: stmt_list & non_stmt
         stmt_list = {}
         non_stmt = {}
         for k,v in self.fields.iteritems():
-            if k in ('body', 'orelse', 'finalbody'):
+            if k in ('body', 'handlers', 'orelse', 'finalbody'):
                 stmt_list[k] = v
             else:
                 non_stmt[k] = v
@@ -148,14 +224,16 @@ class AstNode(object):
         n_stmts = '<tr><td class="field_name">%s</td><td>%s</td></tr>'
         n_close = '</table><div>'
 
-        fields = [v.to_html() for v in non_stmt.itervalues()]
-        stmts = [n_stmts % (k,v.to_html()) for k,v in stmt_list.iteritems()]
+        field_names = [k for k in class_info.get('order', non_stmt.keys())]
+        fields = [non_stmt[v].to_html() for v in field_names]
+        # sorted because by lucky correct order is the same as alphabetical order
+        stmts = [n_stmts% (k,v.to_html()) for k,v in sorted(stmt_list.iteritems())]
 
-        html = n_head % (css, self.class_, ", ".join(attrs))
-        if css == 'stmt':
+        html = n_head % (category , self.class_, ", ".join(attrs))
+        if category == 'stmt':
             line_num = self.attrs[0][1]
             html += n_sourcecode % (line_num, self.lines[line_num - 1])
-        html += n_ns_head % '</td>\n<td>'.join(non_stmt.iterkeys())
+        html += n_ns_head % '</td>\n<td>'.join(field_names)
         html += n_ns_body % "</td>\n<td>".join(fields)
         html += n_stmts_head + "\n".join(stmts)
         html += n_close
