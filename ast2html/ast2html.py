@@ -140,8 +140,8 @@ class AstNode(object):
             return ["%s => %s" % (self.path, repr(self._value))]
 
     class NodeField(AstField):
-        def __init__(self, value, path, lines):
-            self._value = AstNode(value, path, lines)
+        def __init__(self, value, path, lines, parent):
+            self._value = AstNode(value, path, lines, parent)
             self.path = path
         def to_text(self):
             return self._value.to_text()
@@ -153,8 +153,8 @@ class AstNode(object):
             return ll
 
     class ListField(AstField):
-        def __init__(self, value, path, lines):
-            self._value = [AstNode(n, "%s[%d]" % (path,i), lines) for i,n in enumerate(value)]
+        def __init__(self, value, path, lines, parent):
+            self._value = [AstNode(n, "%s[%d]" % (path,i), lines, parent) for i,n in enumerate(value)]
             self.path = path
         def to_text(self):
             return "[%s]" % ", ".join((n.to_text() for n in self._value))
@@ -171,20 +171,22 @@ class AstNode(object):
             return ll
 
 
-    def __init__(self, node, path, lines):
+    def __init__(self, node, path, lines, parent):
         self.node = node
         self.path = path
         self.lines = lines
+        self.parent = parent
         self.class_ = node.__class__.__name__
+        self.line_nums = set()
         self.attrs = [(name, getattr(node, name)) for name in node._attributes]
         self.fields = {}
         for name in node._fields:
             value = getattr(node, name)
             f_path = "%s.%s" % (self.path, name)
             if isinstance(value, ast.AST):
-                self.fields[name] = self.NodeField(value, f_path, lines)
+                self.fields[name] = self.NodeField(value, f_path, lines, self)
             elif isinstance(value, list):
-                self.fields[name] = self.ListField(value, f_path, lines)
+                self.fields[name] = self.ListField(value, f_path, lines, self)
             else:
                 self.fields[name] = self.TypeField(value, f_path, lines)
 
@@ -204,6 +206,21 @@ class AstNode(object):
         category = class_info.get('category', "")
         attrs = ("%s" % v for k,v in self.attrs)
 
+        # add line number of this node to the contatining statement
+        if self.attrs:
+            curent = self
+            while True:
+                if MAP.get(curent.class_, {}).get('category', "") != "stmt":
+                    if curent.parent:
+                        curent = curent.parent
+                        continue
+                    else:
+                        break
+                else:
+                    curent.line_nums.add(self.attrs[0][1])
+                    break
+
+
         # divide fields into 2 groups: stmt_list & non_stmt
         stmt_list = {}
         non_stmt = {}
@@ -217,7 +234,7 @@ class AstNode(object):
         n_head = ('<div class="%s node_tbl"><table><th colspan="10">' +
                   '<span class="node_type">%s</span> ' +
                   '<span class="att">(%s)</span></th>')
-        n_sourcecode = '<tr class="code"><td colspan="10">%s: %s</td></tr>'
+        n_sourcecode = '<tr class="code"><td colspan="10"><pre>%s: %s</pre></td></tr>'
         n_ns_head = '<tr class="field_name"><td>%s</td></tr>'
         n_ns_body = '<tr><td>%s</td></tr>'
         n_stmts_head = '</table><table>'
@@ -231,8 +248,8 @@ class AstNode(object):
 
         html = n_head % (category , self.class_, ", ".join(attrs))
         if category == 'stmt':
-            line_num = self.attrs[0][1]
-            html += n_sourcecode % (line_num, self.lines[line_num - 1])
+            for line_num in self.line_nums:
+                html += n_sourcecode % (line_num, self.lines[line_num - 1])
         html += n_ns_head % '</td>\n<td>'.join(field_names)
         html += n_ns_body % "</td>\n<td>".join(fields)
         html += n_stmts_head + "\n".join(stmts)
@@ -270,7 +287,7 @@ def ast2txt(filename):
     """dump file as plain text (same output as ast.dump)"""
     ct = file2ast(filename)
     lines = file2lines(filename)
-    tree = AstNode(ct, '', lines)
+    tree = AstNode(ct, '', lines, None)
 
     print tree.to_text()
     #print "----------------"
@@ -282,7 +299,7 @@ def ast2map(filename):
     """display variable path to node"""
     ct = file2ast(filename)
     lines = file2lines(filename)
-    tree = AstNode(ct, '', lines)
+    tree = AstNode(ct, '', lines, None)
 
     # map
     for x in tree.to_map():
@@ -293,7 +310,7 @@ def ast2html(filename):
     """pretty print ast in HTML"""
     ct = file2ast(filename)
     lines = file2lines(filename)
-    tree = AstNode(ct, '', lines)
+    tree = AstNode(ct, '', lines, None)
 
     style = """
 * {font-size:small;}
@@ -308,6 +325,7 @@ def ast2html(filename):
 .node_type{background-color:#99B;}
 .final{background-color:#A88;}
 .code{background-color:#ff8800;}
+pre{font-size:13px;margin-bottom:0;}
 """
     print '<html><head><style type="text/css">%s</style></head>' % style
     print '<body><h4>%s</h4>' % filename

@@ -8,3 +8,9 @@ print t
 
 def xxxx(a,b,c=5):
     return (a*b-c)
+
+dd = [23,
+      45,
+      67]
+
+t=7;y=8
