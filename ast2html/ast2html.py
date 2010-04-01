@@ -220,6 +220,18 @@ class AstNode(object):
                     curent.line_nums.add(self.attrs[0][1])
                     break
 
+        # special case for triple quotes multiple line string
+        if category == 'stmt' and self.attrs and self.attrs[1][1] == -1:
+            # start from last line
+            triple_quote_line = self.attrs[0][1]
+            # move up if line contains only terminating triple quotes
+            if len(self.lines[triple_quote_line-1].strip()) == 3:
+                triple_quote_line -= 1
+                self.line_nums.add(triple_quote_line)
+            # move up until it finds starting triple quotes
+            while not self.lines[triple_quote_line-1].strip().startswith('"""'):
+                triple_quote_line -= 1
+                self.line_nums.add(triple_quote_line)
 
         # divide fields into 2 groups: stmt_list & non_stmt
         stmt_list = {}
@@ -248,7 +260,7 @@ class AstNode(object):
 
         html = n_head % (category , self.class_, ", ".join(attrs))
         if category == 'stmt':
-            for line_num in self.line_nums:
+            for line_num in sorted(self.line_nums):
                 html += n_sourcecode % (line_num, self.lines[line_num - 1])
         html += n_ns_head % '</td>\n<td>'.join(field_names)
         html += n_ns_body % "</td>\n<td>".join(fields)
