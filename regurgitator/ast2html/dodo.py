@@ -1,17 +1,17 @@
-
+import glob
 
 def task_asdl():
     return {'actions': ['python asdl2html.py > %(targets)s'],
-            'dependencies': ['python.asdl', 'asdl2html.py'],
+            'file_dep': ['python.asdl', 'asdl2html.py'],
             'targets': ['python-asdl.html'],
             }
 
-SAMPLES = ['sample.py', 'sample2.py', 'sample3.py']
+SAMPLES = glob.glob("samples/*.py")
 def task_ast():
     for sample in SAMPLES:
-        target = "%s.html" % sample
+        target = "%s.html" % sample[:-3]
         yield {'name': sample,
                'actions':["python ast2html.py %s > %s" % (sample, target)],
-               'dependencies': ['ast2html.py', sample],
+               'file_dep': ['ast2html.py', sample],
                'targets': [target]
                }

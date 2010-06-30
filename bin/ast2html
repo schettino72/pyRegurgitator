@@ -1,0 +1,6 @@
+import ast2html
+
+if __name__ == "__main__":
+    import sys
+    filename = sys.argv[1]
+    ast2html.ast2html(filename)

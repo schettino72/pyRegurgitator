@@ -2,5 +2,8 @@ syntax:glob
 
 *.pyc
 *.doit.db
+.ropeproject
 reference
-ast2html/*.html
+venv
+
+ast2html/samples/*.html

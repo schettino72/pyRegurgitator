@@ -12,11 +12,11 @@ Features (done)
 
 * asdl2html => reference table of python's ASDL
 
+* ast2html => super pretty print of python source-code's AST
+
 
 Roadmap (TODO)
 ===============
-
-* ast2html => super pretty print of python source-code's AST
 
 * project_map I  => display folder/package structure
 
