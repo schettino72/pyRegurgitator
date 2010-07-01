@@ -1,0 +1,84 @@
+<html><head><style type="text/css">
+* {font-size:small;}
+.att{font-size:x-small;}
+.node_tbl{border: 1px solid #66B;}
+.node_tbl th{text-align:left;}
+.node_tbl td{vertical-align:top;}
+.stmt{border-top: 2px solid #ff8800;}
+.mod{border: hidden;}
+.field_list{border: 2px solid #eef;}
+.field_name{background-color:#eef;}
+.node_type{background-color:#99B;}
+.final{background-color:#A88;}
+.code{background-color:#ff8800;}
+pre{font-size:13px;margin-bottom:0;}
+</style></head>
+<body><h4>sample.py</h4>
+<div class="mod node_tbl"><table><th colspan="10"><span class="node_type">Module</span> <span class="att">()</span></th><tr class="field_name"><td></td></tr><tr><td></td></tr></table><table><tr><td class="field_name">body</td><td><table class="field_list"><tr><td><div class="stmt node_tbl"><table><th colspan="10"><span class="node_type">Import</span> <span class="att">(1, 0)</span></th><tr class="code"><td colspan="10"><pre>1: import sys
+</pre></td></tr><tr class="field_name"><td>names</td></tr><tr><td><table class="field_list"><tr><td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">alias</span> <span class="att">()</span></th><tr class="field_name"><td>name</td>
+<td>asname</td></tr><tr><td><span class="final">'sys'</span></td>
+<td><span class="final">None</span></td></tr></table><table></table><div></td></tr></table></td></tr></table><table></table><div></td></tr><tr><td><div class="stmt node_tbl"><table><th colspan="10"><span class="node_type">Assign</span> <span class="att">(3, 0)</span></th><tr class="code"><td colspan="10"><pre>3: max_something = 5
+</pre></td></tr><tr class="field_name"><td>targets</td>
+<td>value</td></tr><tr><td><table class="field_list"><tr><td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Name</span> <span class="att">(3, 0)</span></th><tr class="field_name"><td>id</td>
+<td>ctx</td></tr><tr><td><span class="final">'max_something'</span></td>
+<td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Store</span> <span class="att">()</span></th><tr class="field_name"><td></td></tr><tr><td></td></tr></table><table></table><div></td></tr></table><table></table><div></td></tr></table></td>
+<td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Num</span> <span class="att">(3, 16)</span></th><tr class="field_name"><td>n</td></tr><tr><td><span class="final">5</span></td></tr></table><table></table><div></td></tr></table><table></table><div></td></tr><tr><td><div class="stmt node_tbl"><table><th colspan="10"><span class="node_type">ClassDef</span> <span class="att">(5, 0)</span></th><tr class="code"><td colspan="10"><pre>5: class MyClass(object):
+</pre></td></tr><tr class="field_name"><td>name</td>
+<td>bases</td>
+<td>decorator_list</td></tr><tr><td><span class="final">'MyClass'</span></td>
+<td><table class="field_list"><tr><td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Name</span> <span class="att">(5, 14)</span></th><tr class="field_name"><td>id</td>
+<td>ctx</td></tr><tr><td><span class="final">'object'</span></td>
+<td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Load</span> <span class="att">()</span></th><tr class="field_name"><td></td></tr><tr><td></td></tr></table><table></table><div></td></tr></table><table></table><div></td></tr></table></td>
+<td><table class="field_list"></table></td></tr></table><table><tr><td class="field_name">body</td><td><table class="field_list"><tr><td><div class="stmt node_tbl"><table><th colspan="10"><span class="node_type">Assign</span> <span class="att">(6, 4)</span></th><tr class="code"><td colspan="10"><pre>6:     spam = "egg"
+</pre></td></tr><tr class="field_name"><td>targets</td>
+<td>value</td></tr><tr><td><table class="field_list"><tr><td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Name</span> <span class="att">(6, 4)</span></th><tr class="field_name"><td>id</td>
+<td>ctx</td></tr><tr><td><span class="final">'spam'</span></td>
+<td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Store</span> <span class="att">()</span></th><tr class="field_name"><td></td></tr><tr><td></td></tr></table><table></table><div></td></tr></table><table></table><div></td></tr></table></td>
+<td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Str</span> <span class="att">(6, 11)</span></th><tr class="field_name"><td>s</td></tr><tr><td><span class="final">'egg'</span></td></tr></table><table></table><div></td></tr></table><table></table><div></td></tr><tr><td><div class="stmt node_tbl"><table><th colspan="10"><span class="node_type">FunctionDef</span> <span class="att">(8, 4)</span></th><tr class="code"><td colspan="10"><pre>8:     def do_x(a,b=None):
+</pre></td></tr><tr class="field_name"><td>name</td>
+<td>args</td>
+<td>decorator_list</td></tr><tr><td><span class="final">'do_x'</span></td>
+<td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">arguments</span> <span class="att">()</span></th><tr class="field_name"><td>args</td>
+<td>defaults</td>
+<td>vararg</td>
+<td>kwarg</td></tr><tr><td><table class="field_list"><tr><td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Name</span> <span class="att">(8, 13)</span></th><tr class="field_name"><td>id</td>
+<td>ctx</td></tr><tr><td><span class="final">'a'</span></td>
+<td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Param</span> <span class="att">()</span></th><tr class="field_name"><td></td></tr><tr><td></td></tr></table><table></table><div></td></tr></table><table></table><div></td></tr><tr><td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Name</span> <span class="att">(8, 15)</span></th><tr class="field_name"><td>id</td>
+<td>ctx</td></tr><tr><td><span class="final">'b'</span></td>
+<td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Param</span> <span class="att">()</span></th><tr class="field_name"><td></td></tr><tr><td></td></tr></table><table></table><div></td></tr></table><table></table><div></td></tr></table></td>
+<td><table class="field_list"><tr><td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Name</span> <span class="att">(8, 17)</span></th><tr class="field_name"><td>id</td>
+<td>ctx</td></tr><tr><td><span class="final">'None'</span></td>
+<td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Load</span> <span class="att">()</span></th><tr class="field_name"><td></td></tr><tr><td></td></tr></table><table></table><div></td></tr></table><table></table><div></td></tr></table></td>
+<td><span class="final">None</span></td>
+<td><span class="final">None</span></td></tr></table><table></table><div></td>
+<td><table class="field_list"></table></td></tr></table><table><tr><td class="field_name">body</td><td><table class="field_list"><tr><td><div class="stmt node_tbl"><table><th colspan="10"><span class="node_type">Assign</span> <span class="att">(9, 8)</span></th><tr class="code"><td colspan="10"><pre>9:         my_sum = max_something + a
+</pre></td></tr><tr class="field_name"><td>targets</td>
+<td>value</td></tr><tr><td><table class="field_list"><tr><td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Name</span> <span class="att">(9, 8)</span></th><tr class="field_name"><td>id</td>
+<td>ctx</td></tr><tr><td><span class="final">'my_sum'</span></td>
+<td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Store</span> <span class="att">()</span></th><tr class="field_name"><td></td></tr><tr><td></td></tr></table><table></table><div></td></tr></table><table></table><div></td></tr></table></td>
+<td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">BinOp</span> <span class="att">(9, 17)</span></th><tr class="field_name"><td>op</td>
+<td>left</td>
+<td>right</td></tr><tr><td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Add</span> <span class="att">()</span></th><tr class="field_name"><td></td></tr><tr><td></td></tr></table><table></table><div></td>
+<td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Name</span> <span class="att">(9, 17)</span></th><tr class="field_name"><td>id</td>
+<td>ctx</td></tr><tr><td><span class="final">'max_something'</span></td>
+<td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Load</span> <span class="att">()</span></th><tr class="field_name"><td></td></tr><tr><td></td></tr></table><table></table><div></td></tr></table><table></table><div></td>
+<td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Name</span> <span class="att">(9, 33)</span></th><tr class="field_name"><td>id</td>
+<td>ctx</td></tr><tr><td><span class="final">'a'</span></td>
+<td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Load</span> <span class="att">()</span></th><tr class="field_name"><td></td></tr><tr><td></td></tr></table><table></table><div></td></tr></table><table></table><div></td></tr></table><table></table><div></td></tr></table><table></table><div></td></tr><tr><td><div class="stmt node_tbl"><table><th colspan="10"><span class="node_type">Print</span> <span class="att">(10, 8)</span></th><tr class="code"><td colspan="10"><pre>10:         print my_sum
+</pre></td></tr><tr class="field_name"><td>values</td>
+<td>dest</td>
+<td>nl</td></tr><tr><td><table class="field_list"><tr><td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Name</span> <span class="att">(10, 14)</span></th><tr class="field_name"><td>id</td>
+<td>ctx</td></tr><tr><td><span class="final">'my_sum'</span></td>
+<td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Load</span> <span class="att">()</span></th><tr class="field_name"><td></td></tr><tr><td></td></tr></table><table></table><div></td></tr></table><table></table><div></td></tr></table></td>
+<td><span class="final">None</span></td>
+<td><span class="final">True</span></td></tr></table><table></table><div></td></tr><tr><td><div class="stmt node_tbl"><table><th colspan="10"><span class="node_type">Return</span> <span class="att">(11, 8)</span></th><tr class="code"><td colspan="10"><pre>11:         return b is None
+</pre></td></tr><tr class="field_name"><td>value</td></tr><tr><td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Compare</span> <span class="att">(11, 15)</span></th><tr class="field_name"><td>ops</td>
+<td>left</td>
+<td>comparators</td></tr><tr><td><table class="field_list"><tr><td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Is</span> <span class="att">()</span></th><tr class="field_name"><td></td></tr><tr><td></td></tr></table><table></table><div></td></tr></table></td>
+<td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Name</span> <span class="att">(11, 15)</span></th><tr class="field_name"><td>id</td>
+<td>ctx</td></tr><tr><td><span class="final">'b'</span></td>
+<td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Load</span> <span class="att">()</span></th><tr class="field_name"><td></td></tr><tr><td></td></tr></table><table></table><div></td></tr></table><table></table><div></td>
+<td><table class="field_list"><tr><td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Name</span> <span class="att">(11, 20)</span></th><tr class="field_name"><td>id</td>
+<td>ctx</td></tr><tr><td><span class="final">'None'</span></td>
+<td><div class=" node_tbl"><table><th colspan="10"><span class="node_type">Load</span> <span class="att">()</span></th><tr class="field_name"><td></td></tr><tr><td></td></tr></table><table></table><div></td></tr></table><table></table><div></td></tr></table></td></tr></table><table></table><div></td></tr></table><table></table><div></td></tr></table></td></tr></table><div></td></tr></table></td></tr></table><div></td></tr></table></td></tr></table><div>
+</body></html>

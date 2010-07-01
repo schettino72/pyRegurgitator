@@ -2,6 +2,12 @@
 
 from distutils.core import setup
 
+# use README file as long_description
+readme = open('README')
+long_description = readme.read()
+readme.close()
+
+
 setup(name = 'pyRegurgitator',
       description = 'pyRegurgitator - Tools for analysing python code',
       version = '0.1.0',
@@ -24,6 +30,6 @@ setup(name = 'pyRegurgitator',
 
       packages = ['regurgitator'],
       scripts = ['bin/ast2html'],
-      long_description = """pyRegurgitator"""
+      long_description = long_description,
       )
 

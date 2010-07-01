@@ -15,6 +15,25 @@ Features (done)
 * ast2html => super pretty print of python source-code's AST
 
 
+Install
+=========
+
+$ python setup.py install
+
+
+Usage
+=======
+
+As of version 0.1 the only tool available is `ast2html`
+
+ast2html
+----------
+
+$ ast2html my_python_module.py
+
+see http://bitbucket.org/schettino72/pyregurgitator/raw/tip/doc/ast_sample.html for a sample output.
+
+
 Roadmap (TODO)
 ===============
 
@@ -26,9 +45,9 @@ Roadmap (TODO)
 
 * AST -> get all defined names in a module (or another scope)
 
-* refactoring tool -> move class/function to different module
-
 * doc-tool
+
+* refactoring tool
 
 
 
