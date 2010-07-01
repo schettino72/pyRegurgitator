@@ -1,4 +1,4 @@
-import myast as ast
+from regurgitator import myast as ast
 
 
 MAP = {'Assert':
