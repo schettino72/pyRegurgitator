@@ -1,4 +1,4 @@
-import ast2html
+from regurgitator.astview import ast2html
 
 if __name__ == "__main__":
     import sys

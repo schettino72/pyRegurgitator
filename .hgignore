@@ -8,4 +8,4 @@ reference
 venv
 pyRegurgitator.egg-info
 
-ast2html/samples/*.html
+astview/samples/*.html
