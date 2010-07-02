@@ -7,5 +7,6 @@ reference
 
 venv
 pyRegurgitator.egg-info
+dist
 
 astview/samples/*.html
