@@ -1,6 +1,8 @@
+import platform
+
 from regurgitator import myast as ast
 
-
+# python2.5
 MAP = {'Assert':
            {'category':'stmt',
             'order':('test','msg')},
@@ -14,7 +16,7 @@ MAP = {'Assert':
            {'category':'stmt'},
        'ClassDef':
            {'category':'stmt',
-            'order':('name','bases','decorator_list')},
+            'order':('name','bases')},
        'Continue':
            {'category':'stmt'},
        'Delete':
@@ -29,7 +31,7 @@ MAP = {'Assert':
             'order':('target','iter')},
        'FunctionDef':
            {'category':'stmt',
-            'order':('name','args','decorator_list')},
+            'order':('name','args','decorators')},
        'Global':
            {'category':'stmt'},
        'If':
@@ -62,7 +64,7 @@ MAP = {'Assert':
        'Module':
            {'category':'mod'},
 
-       # 21
+
        'alias':
            {'order':('name','asname')},
        'arguments':
@@ -102,6 +104,12 @@ MAP = {'Assert':
        'UnaryOp':
            {'order':('op','operand')},
        }
+
+# fix MAP for python 2.6
+python_version = platform.python_version().split('.')
+if python_version[0] == '2' and python_version[1] == '6':
+    MAP['ClassDef']['order'] = ('name','bases','decorator_list')
+    MAP['FunctionDef']['order'] = ('name','args','decorator_list')
 
 
 class AstNode(object):
@@ -178,6 +186,15 @@ class AstNode(object):
         self.parent = parent
         self.class_ = node.__class__.__name__
         self.line_nums = set()
+
+        # on python2.5 node might not have _attributes, ...
+        if not hasattr(node, '_attributes'):
+            node._attributes = []
+        # ... _fields is None instead of []
+        if node._fields is None:
+            node._fields = []
+        # end - python2.5
+
         self.attrs = [(name, getattr(node, name)) for name in node._attributes]
         self.fields = {}
         for name in node._fields:
