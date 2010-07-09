@@ -1,0 +1,14 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
+ "http://www.w3.org/TR/html4/strict.dtd">
+<html>
+  <head>
+    <title>PyRegurgitator</title>
+  </head>
+
+  <body>
+    <h2>{{ project.root_path }}</h2>
+    {% for folder, content in project.folders.items() %}
+       {{ folder }} ({{ content.folders|length }}) ({{ content.files|length }})
+    {% endfor %}
+  </body>
+</html>
