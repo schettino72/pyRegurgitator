@@ -37,7 +37,8 @@ class Folder(object):
 
 
 class Project(object):
-    def __init__(self, root_path):
+    def __init__(self, name, root_path):
+        self.name = name
         self.root_path = root_path
         self.files = {}
         self.folders = {}
@@ -76,24 +77,25 @@ class Project(object):
  #    </script>
  #    <script type="text/javascript" src="_static/jquery.js"></script>
 
-    def html(self):
+    def html(self, jinja_env):
         """create HTML"""
-        template = jinja_env.get_template("home.html")
+        template = jinja_env.get_template("index.html")
         return template.render(project=self)
 
 
-
-
-if __name__ == "__main__":
+def create_project_map(project_path):
+    """ """
+    root_path = os.path.abspath(project_path)
+    project_name = root_path.split('/')[-1]
     jinja_env = jinja2.Environment(
         loader=jinja2.PackageLoader('regurgitator.project', 'templates'),
         undefined=jinja2.StrictUndefined,
         trim_blocks=True)
-
-    proj = Project("/home/eduardo/src/pyregurgitator")
+    proj = Project(project_name, root_path)
     proj.load_project_files()
-    print proj.folders.keys()
-    print proj.folders['']
-    print proj.folders[''].dump()
-    print
-    print proj.html()
+    print proj.html(jinja_env)
+
+
+
+if __name__ == "__main__":
+    create_project_map("/home/eduardo/src/pyregurgitator")
