@@ -37,6 +37,8 @@ class Folder(object):
 
 
 class Project(object):
+    root_folder_name = '(root)'
+
     def __init__(self, name, root_path):
         self.name = name
         self.root_path = root_path
@@ -55,17 +57,19 @@ class Project(object):
         # initialize folders
         for path in self.files:
             folder, file_ = os.path.split(path)
+            if not folder:
+                folder = self.root_folder_name
             if folder not in self.folders:
                 self.folders[folder] = Folder(folder)
             self.folders[folder].files.append(path)
 
         # add sub-folders
         for folder in self.folders.iterkeys():
-            if folder == '':
+            if folder == self.root_folder_name:
                 continue # skip root folder
             parts = folder.rsplit('/')
             if len(parts) == 1:
-                self.folders[''].folders.append(folder)
+                self.folders[self.root_folder_name].folders.append(folder)
             else:
                 self.folders[parts[0]].folders.append(parts[1])
 
