@@ -1,36 +1,27 @@
-<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01//EN"
- "http://www.w3.org/TR/html4/strict.dtd">
-<html>
-  <head>
-    <title>PyRegurgitator</title>
-  </head>
+{% extends "base.html" %}
 
-  <body>
-    <h2>{{ project.name }}</h2>
-    {{ project.root_path }}
+{% block body %}
+  <h2>{{ project.name }}</h2>
+  {{ project.root_path }}
 
-
-    <h4> Package list </h4>
-    <table border="1">
-      <tr><th>name</th><th>sub-folders</th><th>files</th></tr>
-      {% for folder, content in project.folders|dictsort %}
-      <tr>
-	<td>{{ folder }}</td>
-	<td>{{ content.folders|length }}</td>
-	<td>{{ content.files|length }}</td>
-      </tr>
-      {% endfor %}
-    </table>
+  <h4> Package list </h4>
+  <table border="1">
+    <tr><th>name</th><th>sub-folders</th><th>files</th></tr>
+    {% for folder, content in project.folders|dictsort %}
+    <tr>
+      <td>{{ folder }}</td>
+      <td>{{ content.folders|length }}</td>
+      <td>{{ content.files|length }}</td>
+    </tr>
+    {% endfor %}
+  </table>
 
 
-    <h4> Module list </h4>
-    <table border="1">
-      <tr><th>name</th></tr>
-      {% for file, content in project.files|dictsort  %}
-      <tr><td>{{ file }}</td></tr>
-      {% endfor %}
-    </table>
-
-
-  </body>
-</html>
+  <h4> Module list </h4>
+  <table border="1">
+    <tr><th>name</th></tr>
+    {% for file, content in project.files|dictsort  %}
+    <tr><td>{{ file }}</td></tr>
+    {% endfor %}
+  </table>
+{% endblock %}

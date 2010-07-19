@@ -37,13 +37,17 @@ class Folder(object):
 
 
 class Project(object):
+    """
+    @ivar output: (str) folder where HTML files will be created
+    """
     root_folder_name = '(root)'
 
-    def __init__(self, name, root_path):
+    def __init__(self, name, root_path, output="_html"):
         self.name = name
         self.root_path = root_path
         self.files = {}
         self.folders = {}
+        self.output = output
 
     def load_project_files(self):
         file_list = get_tracked_files_hg(self.root_path)
@@ -83,8 +87,10 @@ class Project(object):
 
     def html(self, jinja_env):
         """create HTML"""
+        index = open(os.path.join(self.output, "index.html"), 'w')
         template = jinja_env.get_template("index.html")
-        return template.render(project=self)
+        index.write(template.render(project=self))
+        index.close()
 
 
 def create_project_map(project_path):
