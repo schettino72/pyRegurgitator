@@ -5,8 +5,6 @@ import os
 
 import jinja2
 
-# build folder
-BUILD = 'html'
 
 
 def get_tracked_files_hg(path):
@@ -23,7 +21,8 @@ def get_tracked_files_hg(path):
 
 
 class Folder(object):
-    def __init__(self, path):
+    def __init__(self, name, path):
+        self.name = name
         self.path = path
         self.folders = []
         self.files = []
@@ -48,6 +47,8 @@ class Project(object):
         self.files = {}
         self.folders = {}
         self.output = output
+        self.output_path = os.path.abspath(os.path.join(
+                os.path.curdir, self.output))
 
     def load_project_files(self):
         file_list = get_tracked_files_hg(self.root_path)
@@ -61,19 +62,21 @@ class Project(object):
         # initialize folders
         for path in self.files:
             folder, file_ = os.path.split(path)
-            if not folder:
-                folder = self.root_folder_name
+            if folder:
+                name = folder
+            else:
+                name = self.root_folder_name
             if folder not in self.folders:
-                self.folders[folder] = Folder(folder)
+                self.folders[folder] = Folder(name, folder)
             self.folders[folder].files.append(path)
 
         # add sub-folders
         for folder in self.folders.iterkeys():
-            if folder == self.root_folder_name:
+            if not folder:
                 continue # skip root folder
-            parts = folder.rsplit('/')
+            parts = folder.rsplit('/', 1)
             if len(parts) == 1:
-                self.folders[self.root_folder_name].folders.append(folder)
+                self.folders[''].folders.append(folder)
             else:
                 self.folders[parts[0]].folders.append(parts[1])
 
@@ -86,11 +89,25 @@ class Project(object):
  #    <script type="text/javascript" src="_static/jquery.js"></script>
 
     def html(self, jinja_env):
-        """create HTML"""
+        """create HTML pages"""
+
+        # index page
         index = open(os.path.join(self.output, "index.html"), 'w')
         template = jinja_env.get_template("index.html")
         index.write(template.render(project=self))
         index.close()
+
+        # folder pages
+        template = jinja_env.get_template("folder.html")
+        for f_name, folder in self.folders.iteritems():
+            page_path = os.path.join(self.output, "%s.html" % folder.name)
+            # FIXME do not use sub-folders. use only relative paths on HTML links
+            if not os.path.exists(os.path.dirname(page_path)):
+                os.makedirs(os.path.dirname(page_path))
+            f_page = open(page_path, 'w')
+            # TODO add breadcrumbs
+            f_page.write(template.render(project=self, folder=folder))
+            f_page.close()
 
 
 def create_project_map(project_path):

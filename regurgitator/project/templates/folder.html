@@ -1,0 +1,21 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+  <h4> {{ folder.path }} </h4>
+  <table border="1">
+    {% for f_name in folder.folders|sort %}
+    <tr>
+      <td><a href="{{project.output_path}}/{{folder.path}}/{{f_name}}.html">{{ f_name }}</a></td>
+    </tr>
+    {% endfor %}
+
+    {% for f_name in folder.files|sort  %}
+    <tr><td>{{ f_name }}</td></tr>
+    {% endfor %}
+
+  </table>
+
+
+  </table>
+{% endblock %}

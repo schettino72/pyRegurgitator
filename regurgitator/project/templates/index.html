@@ -1,15 +1,13 @@
 {% extends "base.html" %}
 
-{% block body %}
-  <h2>{{ project.name }}</h2>
-  {{ project.root_path }}
+{% block content %}
 
   <h4> Package list </h4>
   <table border="1">
     <tr><th>name</th><th>sub-folders</th><th>files</th></tr>
     {% for folder, content in project.folders|dictsort %}
     <tr>
-      <td>{{ folder }}</td>
+      <td><a href="{{content.name}}.html">{{ content.name }}</a></td>
       <td>{{ content.folders|length }}</td>
       <td>{{ content.files|length }}</td>
     </tr>
