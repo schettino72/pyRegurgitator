@@ -10,3 +10,4 @@ pyRegurgitator.egg-info
 dist
 
 astview/samples/*.html
+project/_html

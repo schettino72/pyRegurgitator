@@ -5,6 +5,8 @@ import os
 
 import jinja2
 
+from regurgitator.ast_util import file2ast
+from regurgitator import myast as ast
 
 
 def get_tracked_files_hg(path):
@@ -18,6 +20,19 @@ def get_tracked_files_hg(path):
          "--repository", path],
         stdout=subprocess.PIPE).communicate()[0]
     return [f.strip() for f in output.splitlines()]
+
+
+class File(object):
+    def __init__(self, root_path, path):
+        parts = path.split('/')
+        self.name = parts[-1]
+        self.path = '.'.join(parts)
+        self.ast = file2ast(os.path.join(root_path, path))
+        docstring = ast.get_docstring(self.ast)
+        if docstring:
+            self.desc = docstring.split('\n')[0]
+        else:
+            self.desc = ''
 
 
 class Folder(object):
@@ -72,7 +87,7 @@ class Project(object):
         for path in file_list:
             # ignore non-python files
             if path.endswith(".py"):
-                self.files[path] = None
+                self.files[path] = File(self.root_path, path)
 
         # initialize folders
         for path in self.files:
@@ -114,11 +129,11 @@ class Project(object):
             page_path = os.path.join(self.output, "%s.html" % folder.path)
             f_page = open(page_path, 'w')
             if folder.path:
-                this_path = folder.path + '.'
+                base_path = folder.path + '.'
             else:
-                this_path = folder.path
+                base_path = folder.path
             parents = [self.folders[p] for p in folder.parent_list()]
-            f_page.write(template.render(project=self, base_link=this_path,
+            f_page.write(template.render(project=self, base_link=base_path,
                                          folder=folder, parents=parents))
             f_page.close()
 

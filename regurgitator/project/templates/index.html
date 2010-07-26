@@ -17,9 +17,9 @@
 
   <h4> Module list </h4>
   <table border="1">
-    <tr><th>name</th></tr>
+    <tr><th>name</th><th>description</th></tr>
     {% for file, content in project.files|dictsort  %}
-    <tr><td>{{ file }}</td></tr>
+    <tr><td>{{ file }}</td><td>{{ content.desc }}</td></tr>
     {% endfor %}
   </table>
 {% endblock %}

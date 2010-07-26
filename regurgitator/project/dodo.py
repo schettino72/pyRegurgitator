@@ -15,7 +15,6 @@ def task_regurgitator_map():
 
 
 # TODO
-# - include module docstring
 # - setup apache...
 # - module page
 # - list of first level imports on module page

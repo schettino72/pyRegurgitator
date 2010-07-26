@@ -16,8 +16,8 @@
     </tr>
     {% endfor %}
 
-    {% for f_name in folder.files|sort  %}
-    <tr><td>{{ f_name }}</td></tr>
+    {% for file, content in project.files|dictsort  %}
+    <tr><td>{{ file }}</td><td>{{ content.desc }}</td></tr>
     {% endfor %}
 
   </table>

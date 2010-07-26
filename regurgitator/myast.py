@@ -183,7 +183,8 @@ def iter_child_nodes(node):
                     yield item
 
 
-def get_docstring(node, clean=True):
+# python2.5 removed "clean" attribute. inspect.cleandoc added on python2.6
+def get_docstring(node):
     """
     Return the docstring for the given node or None if no docstring can
     be found.  If the node provided does not have docstrings a TypeError
@@ -193,9 +194,6 @@ def get_docstring(node, clean=True):
         raise TypeError("%r can't have docstrings" % node.__class__.__name__)
     if node.body and isinstance(node.body[0], Expr) and \
        isinstance(node.body[0].value, Str):
-        if clean:
-            import inspect
-            return inspect.cleandoc(node.body[0].value.s)
         return node.body[0].value.s
 
 

@@ -1,6 +1,7 @@
 import platform
 
 from regurgitator import myast as ast
+from regurgitator.ast_util import file2ast
 
 # python2.5
 MAP = {'Assert':
@@ -296,13 +297,6 @@ class AstNode(object):
 #####################################33
 
 
-
-def file2ast(file_name):
-    """get ast-tree from file_name"""
-    fp = open(file_name, 'r')
-    text = fp.read()
-    fp.close()
-    return ast.parse(text, file_name)
 
 def file2lines(file_name):
     """get list of lines from file_name"""
