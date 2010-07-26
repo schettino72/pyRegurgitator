@@ -10,14 +10,14 @@
     {% endfor %}
   </h4>
   <table border="1">
-    {% for f_name in folder.folders|sort %}
+    {% for sub_folder in folder.folders|sort %}
     <tr>
-      <td><a href="{{base_link}}{{f_name}}.html">{{ f_name }}</a></td>
+      <td><a href="{{base_link}}{{sub_folder.name}}.html">{{ sub_folder.name }}</a></td>
     </tr>
     {% endfor %}
 
-    {% for file, content in project.files|dictsort  %}
-    <tr><td>{{ file }}</td><td>{{ content.desc }}</td></tr>
+    {% for file in folder.files|sort  %}
+    <tr><td>{{ file.name }}</td><td>{{ file.desc }}</td></tr>
     {% endfor %}
 
   </table>

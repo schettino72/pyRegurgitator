@@ -27,8 +27,13 @@ class File(object):
         parts = path.split('/')
         self.name = parts[-1]
         self.path = '.'.join(parts)
-        self.ast = file2ast(os.path.join(root_path, path))
-        docstring = ast.get_docstring(self.ast)
+        try:
+            docstring = None
+            self.ast = file2ast(os.path.join(root_path, path))
+            docstring = ast.get_docstring(self.ast)
+        except Exception, e:
+            print "pymap (ERROR) %s" % e
+
         if docstring:
             self.desc = docstring.split('\n')[0]
         else:
@@ -85,26 +90,35 @@ class Project(object):
 
         # initialize files
         for path in file_list:
+            print "pymap: init file: %s " % path
             # ignore non-python files
             if path.endswith(".py"):
                 self.files[path] = File(self.root_path, path)
 
         # initialize folders
         for path in self.files:
+            print "pymap: processing file: %s " % path
             folder, file_ = os.path.split(path)
             if folder not in self.folders:
                 self.folders[folder] = Folder(folder)
-            self.folders[folder].files.append(path)
+            self.folders[folder].files.append(self.files[path])
+
+        def add_folder(parts):
+            while parts[0] not in self.folders:
+                self.folders[parts[0]] = Folder("/".join(parts))
+                parts = parts[0].rsplit('/', 1)
 
         # add sub-folders
-        for folder in self.folders.iterkeys():
+        for folder in self.folders.keys():
+            print "pymap: init folder: %s " % folder
             if not folder:
                 continue # skip root folder
             parts = folder.rsplit('/', 1)
             if len(parts) == 1:
-                self.folders[''].folders.append(folder)
+                self.folders[''].folders.append(self.folders[folder])
             else:
-                self.folders[parts[0]].folders.append(parts[1])
+                add_folder(parts)
+                self.folders[parts[0]].folders.append(self.folders[folder])
 
 
 
@@ -132,6 +146,7 @@ class Project(object):
                 base_path = folder.path + '.'
             else:
                 base_path = folder.path
+            print "pymap: generate template for ", folder
             parents = [self.folders[p] for p in folder.parent_list()]
             f_page.write(template.render(project=self, base_link=base_path,
                                          folder=folder, parents=parents))
