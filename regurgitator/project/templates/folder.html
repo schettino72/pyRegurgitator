@@ -2,11 +2,17 @@
 
 {% block content %}
 
-  <h4> {{ folder.path }} </h4>
+  <h4 >Folder: {{folder.name}} </h4>
+  <h4>
+    {% for parent in parents %}
+      <a href="{{parent.path}}.html"> {{parent.name}}</a>
+      {% if not loop.last %} / {% endif %}
+    {% endfor %}
+  </h4>
   <table border="1">
     {% for f_name in folder.folders|sort %}
     <tr>
-      <td><a href="{{project.output_path}}/{{folder.path}}/{{f_name}}.html">{{ f_name }}</a></td>
+      <td><a href="{{base_link}}{{f_name}}.html">{{ f_name }}</a></td>
     </tr>
     {% endfor %}
 

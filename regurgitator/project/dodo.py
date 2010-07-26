@@ -12,3 +12,16 @@ def task_regurgitator_map():
             'targets': [output_folder + '/index.html'],
             'clean': ['rm -rf %s' % output_folder],
             }
+
+
+# TODO
+# - include module docstring
+# - setup apache...
+# - module page
+# - list of first level imports on module page
+# - package page include import graph
+# - module page - list of all imports at any level
+
+
+# OTHER
+# - include link to trac

@@ -21,11 +21,29 @@ def get_tracked_files_hg(path):
 
 
 class Folder(object):
-    def __init__(self, name, path):
-        self.name = name
-        self.path = path
+    """
+    @ivar name: (str) '/' separate folder name. "(root)" for root folder
+    """
+    def __init__(self, path):
+        parts = path.split('/')
+        if not path:
+            self.name = self.full_name = "(root)"
+        else:
+            self.name = parts[-1]
+            self.full_name = path
+        self.path = '.'.join(parts)
         self.folders = []
         self.files = []
+
+    def parent_list(self):
+        if not self.path:
+            return ['']
+        parents = ['']
+        current = []
+        for part in self.path.split('.'):
+            current.append(part)
+            parents.append("/".join(current))
+        return parents
 
     def __repr__(self):
         return "Folder(%s)" % self.path
@@ -39,7 +57,6 @@ class Project(object):
     """
     @ivar output: (str) folder where HTML files will be created
     """
-    root_folder_name = '(root)'
 
     def __init__(self, name, root_path, output="_html"):
         self.name = name
@@ -47,8 +64,6 @@ class Project(object):
         self.files = {}
         self.folders = {}
         self.output = output
-        self.output_path = os.path.abspath(os.path.join(
-                os.path.curdir, self.output))
 
     def load_project_files(self):
         file_list = get_tracked_files_hg(self.root_path)
@@ -62,12 +77,8 @@ class Project(object):
         # initialize folders
         for path in self.files:
             folder, file_ = os.path.split(path)
-            if folder:
-                name = folder
-            else:
-                name = self.root_folder_name
             if folder not in self.folders:
-                self.folders[folder] = Folder(name, folder)
+                self.folders[folder] = Folder(folder)
             self.folders[folder].files.append(path)
 
         # add sub-folders
@@ -100,13 +111,15 @@ class Project(object):
         # folder pages
         template = jinja_env.get_template("folder.html")
         for f_name, folder in self.folders.iteritems():
-            page_path = os.path.join(self.output, "%s.html" % folder.name)
-            # FIXME do not use sub-folders. use only relative paths on HTML links
-            if not os.path.exists(os.path.dirname(page_path)):
-                os.makedirs(os.path.dirname(page_path))
+            page_path = os.path.join(self.output, "%s.html" % folder.path)
             f_page = open(page_path, 'w')
-            # TODO add breadcrumbs
-            f_page.write(template.render(project=self, folder=folder))
+            if folder.path:
+                this_path = folder.path + '.'
+            else:
+                this_path = folder.path
+            parents = [self.folders[p] for p in folder.parent_list()]
+            f_page.write(template.render(project=self, base_link=this_path,
+                                         folder=folder, parents=parents))
             f_page.close()
 
 
