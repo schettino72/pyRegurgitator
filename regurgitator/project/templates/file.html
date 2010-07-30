@@ -10,6 +10,17 @@
     {% endfor %}
   </h4>
 
-  {{file_obj.desc}}
+  <h4> docstring </h4>
+  <div>
+    {{file_obj.desc | default("<no module  docstring>" , true) | escape}}
+  </div>
+
+  <h4> imports </h4>
+  <div>
+    {% for imp, names in file_obj.imports  %}
+      <div>{{ imp }} - {{names}} </div>
+    {% endfor %}
+  </div>
+
 
 {% endblock %}

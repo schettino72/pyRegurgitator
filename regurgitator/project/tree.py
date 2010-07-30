@@ -37,10 +37,33 @@ class File(object):
         except Exception, e:
             print "pymap (ERROR) %s" % e
 
+        # module docstring
         if docstring:
             self.desc = docstring.split('\n')[0]
         else:
             self.desc = ''
+
+        # imports
+        class ImportsFinder(ast.NodeVisitor):
+            def __init__(self):
+                ast.NodeVisitor.__init__(self)
+                self.imports = []
+
+            def visit_Import(self, node):
+                names = [(n.name, n.asname) for n in node.names]
+                self.imports.append([None, names, None])
+                ast.NodeVisitor.generic_visit(self, node)
+
+            def visit_ImportFrom(self, node):
+                names = [(n.name, n.asname) for n in node.names]
+                self.imports.append([node.module, names, node.level])
+                ast.NodeVisitor.generic_visit(self, node)
+
+        self.imports = []
+        if self.ast:
+            finder = ImportsFinder()
+            finder.visit(self.ast)
+            self.imports = ([(m[0], m[1]) for m in finder.imports])
 
     def parent_list(self):
         parents = ['']
