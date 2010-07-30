@@ -1,0 +1,15 @@
+{% extends "base.html" %}
+
+{% block content %}
+
+  <h4 >File: {{file_obj.name}} </h4>
+  <h4>
+    {% for parent in parents %}
+      <a href="{{parent.path}}.html"> {{parent.name}}</a>
+      {% if not loop.last %} / {% endif %}
+    {% endfor %}
+  </h4>
+
+  {{file_obj.desc}}
+
+{% endblock %}

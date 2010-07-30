@@ -27,7 +27,9 @@ class File(object):
     def __init__(self, root_path, path):
         parts = path.split('/')
         self.name = parts[-1]
-        self.path = '.'.join(parts)
+        self.path = path
+        self.ref = '.'.join(parts)
+
         try:
             docstring = None
             self.ast = file2ast(os.path.join(root_path, path))
@@ -39,6 +41,14 @@ class File(object):
             self.desc = docstring.split('\n')[0]
         else:
             self.desc = ''
+
+    def parent_list(self):
+        parents = ['']
+        current = []
+        for part in self.path.split('/')[:-1]:
+            current.append(part)
+            parents.append("/".join(current))
+        return parents
 
 
 
@@ -147,17 +157,15 @@ class Project(object):
  #    </script>
  #    <script type="text/javascript" src="_static/jquery.js"></script>
 
-    def html(self, jinja_env):
-        """create HTML pages"""
 
-        # index page
+    def _html_index(self, template):
+        """create HTML for index page"""
         index = open(os.path.join(self.output, "index.html"), 'w')
-        template = jinja_env.get_template("index.html")
         index.write(template.render(project=self))
         index.close()
 
-        # folder pages
-        template = jinja_env.get_template("folder.html")
+    def _html_folder(self, template):
+        """create HTML for folder pages"""
         for f_name, folder in self.folders.iteritems():
             page_path = os.path.join(self.output, "%s.html" % folder.path)
             f_page = open(page_path, 'w')
@@ -170,6 +178,26 @@ class Project(object):
             f_page.write(template.render(project=self, base_link=base_path,
                                          folder=folder, parents=parents))
             f_page.close()
+
+    def _html_file(self, template):
+        """create HTML for file pages"""
+        for file_obj in self.files.itervalues():
+            parents = [self.folders[p] for p in file_obj.parent_list()]
+
+            page_path = os.path.join(self.output, "%s.html" % file_obj.ref)
+            file_page = open(page_path, 'w')
+            file_page.write(template.render(project=self, file_obj=file_obj,
+                                            parents=parents))
+            file_page.close()
+
+        pass
+
+    def html(self, jinja_env):
+        """create HTML pages"""
+        self._html_index(jinja_env.get_template("index.html"))
+        self._html_folder(jinja_env.get_template("folder.html"))
+        self._html_file(jinja_env.get_template("file.html"))
+
 
 
 def create_project_map(project_path):

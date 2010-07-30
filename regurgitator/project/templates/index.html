@@ -19,7 +19,7 @@
   <table border="1">
     <tr><th>name</th><th>description</th></tr>
     {% for file, content in project.files|dictsort  %}
-    <tr><td>{{ file }}</td><td>{{ content.desc }}</td></tr>
+    <tr><td><a href="{{content.ref}}.html">{{ content.path }}</a></td><td>{{ content.desc }}</td></tr>
     {% endfor %}
   </table>
 {% endblock %}

@@ -17,7 +17,7 @@
     {% endfor %}
 
     {% for file in folder.files|sort  %}
-    <tr><td>{{ file.name }}</td><td>{{ file.desc }}</td></tr>
+    <tr><td><a href="{{file.ref}}.html">{{ file.name }}</a></td><td>{{ file.desc }}</td></tr>
     {% endfor %}
 
   </table>

@@ -15,7 +15,6 @@ def task_regurgitator_map():
 
 
 # TODO
-# - module page
 # - list of first level imports on module page
 # - integrate with doit
 # - package page include import graph
