@@ -55,8 +55,8 @@ class File(object):
 class Folder(object):
     """
     @ivar name: (str) folder name (only part after last '/')
-    @ivar full_name: (str) '/' separate folder path. "(root)" for root folder
-    @ivar path: (str) "." separated folder path
+    @ivar path: (str) '/' separate folder path
+    @ivar ref: (str) "." separated folder path
     """
     def __init__(self, path):
         """
@@ -64,13 +64,13 @@ class Folder(object):
                           should NOT start with '/'
         """
         parts = path.split('/')
+        self.path = path
         if not path:
-            self.name = self.full_name = "(root)"
-            self.path = "_root_folder"
+            self.name = "(root)"
+            self.ref = "_root_folder"
         else:
             self.name = parts[-1]
-            self.full_name = path
-            self.path = '.'.join(parts)
+            self.ref = '.'.join(parts)
         self.folders = []
         self.files = []
 
@@ -84,11 +84,11 @@ class Folder(object):
         """
 
         parents = ['']
-        if self.path == '_root_folder':
+        if self.ref == '_root_folder':
             return parents
 
         current = []
-        for part in self.path.split('.'):
+        for part in self.path.split('/'):
             current.append(part)
             parents.append("/".join(current))
         return parents
@@ -167,12 +167,12 @@ class Project(object):
     def _html_folder(self, template):
         """create HTML for folder pages"""
         for f_name, folder in self.folders.iteritems():
-            page_path = os.path.join(self.output, "%s.html" % folder.path)
+            page_path = os.path.join(self.output, "%s.html" % folder.ref)
             f_page = open(page_path, 'w')
-            if folder.path == "_root_folder":
+            if folder.ref == "_root_folder":
                 base_path = ''
             else:
-                base_path = folder.path + '.'
+                base_path = folder.ref + '.'
             print "pymap: generate template for ", folder
             parents = [self.folders[p] for p in folder.parent_list()]
             f_page.write(template.render(project=self, base_link=base_path,

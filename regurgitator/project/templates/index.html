@@ -7,7 +7,7 @@
     <tr><th>name</th><th>sub-folders</th><th>files</th></tr>
     {% for folder, content in project.folders|dictsort %}
     <tr>
-      <td><a href="{{content.path}}.html">{{ content.full_name }}</a></td>
+      <td><a href="{{content.ref}}.html">{{ content.path | default('(root)', true)}}</a></td>
       <td>{{ content.folders|length }}</td>
       <td>{{ content.files|length }}</td>
     </tr>

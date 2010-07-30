@@ -5,7 +5,7 @@
   <h4 >Folder: {{folder.name}} </h4>
   <h4>
     {% for parent in parents %}
-      <a href="{{parent.path}}.html"> {{parent.name}}</a>
+      <a href="{{parent.ref}}.html"> {{parent.name}}</a>
       {% if not loop.last %} / {% endif %}
     {% endfor %}
   </h4>
