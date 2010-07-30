@@ -29,6 +29,7 @@ class File(object):
         self.name = parts[-1]
         self.path = path
         self.ref = '.'.join(parts)
+        self.ast = None
 
         try:
             docstring = None
