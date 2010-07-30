@@ -22,6 +22,7 @@ def get_tracked_files_hg(path):
     return [f.strip() for f in output.splitlines()]
 
 
+
 class File(object):
     def __init__(self, root_path, path):
         parts = path.split('/')
@@ -40,37 +41,57 @@ class File(object):
             self.desc = ''
 
 
+
 class Folder(object):
     """
-    @ivar name: (str) '/' separate folder name. "(root)" for root folder
+    @ivar name: (str) folder name (only part after last '/')
+    @ivar full_name: (str) '/' separate folder path. "(root)" for root folder
+    @ivar path: (str) "." separated folder path
     """
     def __init__(self, path):
+        """
+        @param path(str): relative path to the root of the project.
+                          should NOT start with '/'
+        """
         parts = path.split('/')
         if not path:
             self.name = self.full_name = "(root)"
+            self.path = "_root_folder"
         else:
             self.name = parts[-1]
             self.full_name = path
-        self.path = '.'.join(parts)
+            self.path = '.'.join(parts)
         self.folders = []
         self.files = []
 
+
     def parent_list(self):
-        if not self.path:
-            return ['']
+        """return list of parent folders "/" separated
+
+        >>> my_folder = Folder('top_p/sub_p1/sub_p2')
+        >>> my_folder.parent_list()
+        ['', 'top_p', 'top_p/sub_p1', 'top_p/sub_p1/sub_p2']
+        """
+
         parents = ['']
+        if self.path == '_root_folder':
+            return parents
+
         current = []
         for part in self.path.split('.'):
             current.append(part)
             parents.append("/".join(current))
         return parents
 
+
     def __repr__(self):
         return "Folder(%s)" % self.path
+
 
     def dump(self):
         return ("Folder(%s){\n  folders=[%s]\n  files=[%s]}" %
                 (self.path, ", ".join(self.folders), ", ".join(self.files)))
+
 
 
 class Project(object):
@@ -142,10 +163,10 @@ class Project(object):
         for f_name, folder in self.folders.iteritems():
             page_path = os.path.join(self.output, "%s.html" % folder.path)
             f_page = open(page_path, 'w')
-            if folder.path:
-                base_path = folder.path + '.'
+            if folder.path == "_root_folder":
+                base_path = ''
             else:
-                base_path = folder.path
+                base_path = folder.path + '.'
             print "pymap: generate template for ", folder
             parents = [self.folders[p] for p in folder.parent_list()]
             f_page.write(template.render(project=self, base_link=base_path,
