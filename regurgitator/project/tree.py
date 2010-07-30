@@ -121,13 +121,12 @@ class Project(object):
             print "pymap: processing file: %s " % path
             folder, file_ = os.path.split(path)
             if folder not in self.folders:
+                new_folder = Folder(folder)
                 self.folders[folder] = Folder(folder)
+                for folder_path in new_folder.parent_list()[:-1]:
+                    if folder_path not in self.folders:
+                        self.folders[folder_path] = Folder(folder_path)
             self.folders[folder].files.append(self.files[path])
-
-        def add_folder(parts):
-            while parts[0] not in self.folders:
-                self.folders[parts[0]] = Folder("/".join(parts))
-                parts = parts[0].rsplit('/', 1)
 
         # add sub-folders
         for folder in self.folders.keys():
@@ -138,7 +137,6 @@ class Project(object):
             if len(parts) == 1:
                 self.folders[''].folders.append(self.folders[folder])
             else:
-                add_folder(parts)
                 self.folders[parts[0]].folders.append(self.folders[folder])
 
 
