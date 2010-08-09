@@ -11,3 +11,5 @@ dist
 
 astview/samples/*.html
 project/_html
+_html
+_ast

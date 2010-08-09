@@ -2,8 +2,11 @@
 
 import subprocess
 import os
+import sys
+import cPickle as pickle
 
 import jinja2
+from doit import task, cmds
 
 from regurgitator.ast_util import file2ast
 from regurgitator import myast as ast
@@ -24,17 +27,15 @@ def get_tracked_files_hg(path):
 
 
 class File(object):
-    def __init__(self, root_path, path):
+    def __init__(self, path, ast_node):
+        """
+        @param ast_node: if not given
+        """
         parts = path.split('/')
         self.name = parts[-1]
         self.path = path
         self.ref = '.'.join(parts)
-        self.ast = None
-
-        try:
-            self.ast = file2ast(os.path.join(root_path, path))
-        except Exception, e:
-            print "pymap (ERROR) %s" % e
+        self.ast = ast_node
 
         self.desc = self.get_docstring()
         self.imports = self.get_imports()
@@ -147,6 +148,12 @@ class Folder(object):
                 (self.path, ", ".join(self.folders), ", ".join(self.files)))
 
 
+def save_ast(in_module, out_path):
+    mod_ast = file2ast(in_module)
+    out = open(out_path, 'w')
+    pickle.dump(mod_ast, out)
+    out.close()
+
 
 class Project(object):
     """
@@ -160,15 +167,63 @@ class Project(object):
         self.folders = {}
         self.output = output
 
-    def load_project_files(self):
-        file_list = get_tracked_files_hg(self.root_path)
+
+    def init_files_doit(self, file_list):
+        # compile module's ast
+        ast_tasks = []
+        for path in file_list:
+            print "pymap: ast file: %s " % path
+            # ignore non-python files
+            if path.endswith(".py"):
+                abs_path = os.path.join(self.root_path, path)
+
+                target = "_ast/" + path.replace('/', '.') + ".ast"
+                this_task = None
+                this_task = task.Task(
+                    "ast:%s" % abs_path, # name
+                    [(save_ast, (abs_path, target))], # actions
+                    [abs_path], # file_dep
+                    [target], # targets
+                    )
+                ast_tasks.append((path, this_task))
+
+        cmds.doit_run(".reg_doit.db", (i[1] for i in ast_tasks), sys.stdout,
+                      continue_=True)
 
         # initialize files
+        mod_ast_list = []
+        for path, ast_task in ast_tasks:
+            print "pymap: load ast file: %s " % path
+            try:
+                ast_file = open(ast_task.targets[0], 'r')
+                mod_ast_list.append((path, pickle.load(ast_file)))
+                ast_file.close()
+            except Exception, e:
+                print "pymap (ERROR) %s" % e
+                mod_ast = None
+
+        # initialize files
+        for path, mod_ast in mod_ast_list:
+            print "pymap: process ast file: %s " % path
+            self.files[path] = File(path, mod_ast)
+
+
+    def init_files(self, file_list):
         for path in file_list:
             print "pymap: init file: %s " % path
             # ignore non-python files
             if path.endswith(".py"):
-                self.files[path] = File(self.root_path, path)
+                try:
+                    this_ast = file2ast(os.path.join(self.root_path, path))
+                except Exception, e:
+                    print "pymap (ERROR) %s" % e
+                self.files[path] = File(path, this_ast)
+
+
+    def load_project_files(self):
+        file_list = get_tracked_files_hg(self.root_path)
+        self.init_files(file_list)
+
 
         # initialize folders
         for path in self.files:

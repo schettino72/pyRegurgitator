@@ -15,6 +15,10 @@ def task_regurgitator_map():
 
 
 # TODO
+# what is faster?
+#     .py => ast
+#     pickle load ast from file
+#
 # - integrate with doit
 # - package page include import graph
 # - module page - list of all imports at any level
