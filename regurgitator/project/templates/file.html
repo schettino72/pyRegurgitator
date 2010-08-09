@@ -16,11 +16,14 @@
   </div>
 
   <h4> imports </h4>
-  <div>
-    {% for imp, names in file_obj.imports  %}
-      <div>{{ imp }} - {{names}} </div>
+  <table border="1">
+    <tr><th>module</th><th>name</th><th>asname</th><th>level</th></tr>
+    {% for imports in file_obj.imports  %}
+      <tr><td>{{imports[0]}}</td><td>{{imports[1]}}</td>
+	<td>{{imports[2]}}</td><td>{{imports[3]}}</td>
+      </tr>
     {% endfor %}
-  </div>
+  </table>
 
 
 {% endblock %}

@@ -32,41 +32,61 @@ class File(object):
         self.ast = None
 
         try:
-            docstring = None
             self.ast = file2ast(os.path.join(root_path, path))
-            docstring = ast.get_docstring(self.ast)
         except Exception, e:
             print "pymap (ERROR) %s" % e
 
-        # module docstring
-        if docstring:
-            self.desc = docstring.split('\n')[0]
-        else:
-            self.desc = ''
+        self.desc = self.get_docstring()
+        self.imports = self.get_imports()
 
-        # imports
+
+    def get_docstring(self):
+        """get module docstring"""
+        if not self.ast:
+            return ''
+
+        docstring = ast.get_docstring(self.ast)
+        if docstring:
+            return docstring.split('\n')[0]
+        else:
+            return ''
+
+
+    def get_imports(self):
+        """get list of imports from module"""
+
         class ImportsFinder(ast.NodeVisitor):
+            """find all imports
+            @ivar imports: (list - tuple) (module, name, asname, level)
+            """
             def __init__(self):
                 ast.NodeVisitor.__init__(self)
                 self.imports = []
 
             def visit_Import(self, node):
-                names = [(n.name, n.asname) for n in node.names]
-                self.imports.append([None, names, None])
+                self.imports.extend((None, n.name, n.asname, None)
+                                    for n in node.names)
                 ast.NodeVisitor.generic_visit(self, node)
 
             def visit_ImportFrom(self, node):
-                names = [(n.name, n.asname) for n in node.names]
-                self.imports.append([node.module, names, node.level])
+                self.imports.extend((node.module, n.name, n.asname, node.level)
+                                    for n in node.names)
                 ast.NodeVisitor.generic_visit(self, node)
 
-        self.imports = []
-        if self.ast:
-            finder = ImportsFinder()
-            finder.visit(self.ast)
-            self.imports = ([(m[0], m[1]) for m in finder.imports])
+        if not self.ast:
+            return []
+        finder = ImportsFinder()
+        finder.visit(self.ast)
+        return finder.imports
+
 
     def parent_list(self):
+        """return list of parent folders "/" separated
+
+        >>> my_file = File('top_p/sub_p1/myfile')
+        >>> my_file.parent_list()
+        ['', 'top_p', 'top_p/sub_p1']
+        """
         parents = ['']
         current = []
         for part in self.path.split('/')[:-1]:
