@@ -2,15 +2,14 @@
 
 import subprocess
 import os
-import sys
-import cPickle as pickle
+import time
 
 import jinja2
-from doit import task, cmds
 
 from regurgitator.ast_util import file2ast
 from regurgitator import myast as ast
 
+start = []
 
 def get_tracked_files_hg(path):
     """get all files being tracked by HG
@@ -27,7 +26,7 @@ def get_tracked_files_hg(path):
 
 
 class File(object):
-    def __init__(self, path, ast_node):
+    def __init__(self, path):
         """
         @param ast_node: if not given
         """
@@ -35,22 +34,31 @@ class File(object):
         self.name = parts[-1]
         self.path = path
         self.ref = '.'.join(parts)
-        self.ast = ast_node
 
-        self.desc = self.get_docstring()
-        self.imports = self.get_imports()
+        self.ast = None
+        self.desc = None
+        self.imports = None
+
+
+    def get_ast(self, root_path):
+        """get module's ast node"""
+        try:
+            self.ast = file2ast(os.path.join(root_path, self.path))
+        except Exception, e:
+            print "pymap (ERROR) %s" % e
 
 
     def get_docstring(self):
         """get module docstring"""
         if not self.ast:
-            return ''
+            self.desc = ''
+            return
 
         docstring = ast.get_docstring(self.ast)
         if docstring:
-            return docstring.split('\n')[0]
+            self.desc = docstring.split('\n')[0]
         else:
-            return ''
+            self.desc = ''
 
 
     def get_imports(self):
@@ -78,7 +86,7 @@ class File(object):
             return []
         finder = ImportsFinder()
         finder.visit(self.ast)
-        return finder.imports
+        self.imports = finder.imports
 
 
     def parent_list(self):
@@ -148,12 +156,6 @@ class Folder(object):
                 (self.path, ", ".join(self.folders), ", ".join(self.files)))
 
 
-def save_ast(in_module, out_path):
-    mod_ast = file2ast(in_module)
-    out = open(out_path, 'w')
-    pickle.dump(mod_ast, out)
-    out.close()
-
 
 class Project(object):
     """
@@ -166,68 +168,29 @@ class Project(object):
         self.files = {}
         self.folders = {}
         self.output = output
+        self.jinja_env = jinja2.Environment(
+            loader=jinja2.PackageLoader('regurgitator.project', 'templates'),
+            undefined=jinja2.StrictUndefined,
+            trim_blocks=True)
 
-
-    def init_files_doit(self, file_list):
-        # compile module's ast
-        ast_tasks = []
-        for path in file_list:
-            print "pymap: ast file: %s " % path
-            # ignore non-python files
-            if path.endswith(".py"):
-                abs_path = os.path.join(self.root_path, path)
-
-                target = "_ast/" + path.replace('/', '.') + ".ast"
-                this_task = None
-                this_task = task.Task(
-                    "ast:%s" % abs_path, # name
-                    [(save_ast, (abs_path, target))], # actions
-                    [abs_path], # file_dep
-                    [target], # targets
-                    )
-                ast_tasks.append((path, this_task))
-
-        cmds.doit_run(".reg_doit.db", (i[1] for i in ast_tasks), sys.stdout,
-                      continue_=True)
-
-        # initialize files
-        mod_ast_list = []
-        for path, ast_task in ast_tasks:
-            print "pymap: load ast file: %s " % path
-            try:
-                ast_file = open(ast_task.targets[0], 'r')
-                mod_ast_list.append((path, pickle.load(ast_file)))
-                ast_file.close()
-            except Exception, e:
-                print "pymap (ERROR) %s" % e
-                mod_ast = None
-
-        # initialize files
-        for path, mod_ast in mod_ast_list:
-            print "pymap: process ast file: %s " % path
-            self.files[path] = File(path, mod_ast)
-
-
-    def init_files(self, file_list):
-        for path in file_list:
-            print "pymap: init file: %s " % path
-            # ignore non-python files
-            if path.endswith(".py"):
-                try:
-                    this_ast = file2ast(os.path.join(self.root_path, path))
-                except Exception, e:
-                    print "pymap (ERROR) %s" % e
-                self.files[path] = File(path, this_ast)
-
-
-    def load_project_files(self):
+        # initialization of project files/folders
         file_list = get_tracked_files_hg(self.root_path)
-        self.init_files(file_list)
+        self._init_files(file_list)
+        self._init_folders()
 
 
+    def _init_files(self, file_list):
+        for path in file_list:
+#            print "pymap: init file: %s " % path
+            # ignore non-python files
+            if path.endswith(".py"):
+                self.files[path] = File(path)
+
+
+    def _init_folders(self):
         # initialize folders
         for path in self.files:
-            print "pymap: processing file: %s " % path
+#            print "pymap: processing file: %s " % path
             folder, file_ = os.path.split(path)
             if folder not in self.folders:
                 new_folder = Folder(folder)
@@ -239,7 +202,7 @@ class Project(object):
 
         # add sub-folders
         for folder in self.folders.keys():
-            print "pymap: init folder: %s " % folder
+#            print "pymap: init folder: %s " % folder
             if not folder:
                 continue # skip root folder
             parts = folder.rsplit('/', 1)
@@ -250,66 +213,76 @@ class Project(object):
 
 
 
+    def html(self, jinja_env):
+        """create HTML pages"""
+        self.html_index()
 
- # <link rel="stylesheet" href="_static/pygments.css" type="text/css">
- #    <script type="text/javascript">
- #    </script>
- #    <script type="text/javascript" src="_static/jquery.js"></script>
+        folder_template = self.jinja_env.get_template("folder.html")
+        for folder_obj in self.folders.itervalues():
+            self.html_folder(folder_template, folder_obj)
 
+        file_template = self.jinja_env.get_template("file.html")
+        for file_obj in self.files.itervalues():
+            self.html_file(file_template, file_obj)
 
-    def _html_index(self, template):
+    def html_index(self):
         """create HTML for index page"""
+        template = self.jinja_env.get_template("index.html")
         index = open(os.path.join(self.output, "index.html"), 'w')
         index.write(template.render(project=self))
         index.close()
 
-    def _html_folder(self, template):
+    def html_folder(self, template, folder_obj):
         """create HTML for folder pages"""
-        for f_name, folder in self.folders.iteritems():
-            page_path = os.path.join(self.output, "%s.html" % folder.ref)
-            f_page = open(page_path, 'w')
-            if folder.ref == "_root_folder":
-                base_path = ''
-            else:
-                base_path = folder.ref + '.'
-            print "pymap: generate template for ", folder
-            parents = [self.folders[p] for p in folder.parent_list()]
-            f_page.write(template.render(project=self, base_link=base_path,
-                                         folder=folder, parents=parents))
-            f_page.close()
+        page_path = os.path.join(self.output, "%s.html" % folder_obj.ref)
+        f_page = open(page_path, 'w')
+        if folder_obj.ref == "_root_folder":
+            base_path = ''
+        else:
+            base_path = folder_obj.ref + '.'
+        # print "pymap: generate template for ", folder
+        parents = [self.folders[p] for p in folder_obj.parent_list()]
+        f_page.write(template.render(project=self, base_link=base_path,
+                                     folder=folder_obj, parents=parents))
+        f_page.close()
 
-    def _html_file(self, template):
+    def html_file(self, template, file_obj):
         """create HTML for file pages"""
-        for file_obj in self.files.itervalues():
-            parents = [self.folders[p] for p in file_obj.parent_list()]
+        parents = [self.folders[p] for p in file_obj.parent_list()]
 
-            page_path = os.path.join(self.output, "%s.html" % file_obj.ref)
-            file_page = open(page_path, 'w')
-            file_page.write(template.render(project=self, file_obj=file_obj,
-                                            parents=parents))
-            file_page.close()
+        page_path = os.path.join(self.output, "%s.html" % file_obj.ref)
+        file_page = open(page_path, 'w')
+        file_page.write(template.render(project=self, file_obj=file_obj,
+                                        parents=parents))
+        file_page.close()
 
-        pass
-
-    def html(self, jinja_env):
-        """create HTML pages"""
-        self._html_index(jinja_env.get_template("index.html"))
-        self._html_folder(jinja_env.get_template("folder.html"))
-        self._html_file(jinja_env.get_template("file.html"))
 
 
 
 def create_project_map(project_path):
     """ """
+    # setup
     root_path = os.path.abspath(project_path)
     project_name = root_path.split('/')[-1]
-    jinja_env = jinja2.Environment(
-        loader=jinja2.PackageLoader('regurgitator.project', 'templates'),
-        undefined=jinja2.StrictUndefined,
-        trim_blocks=True)
+
+    start.append(time.time())
+
+    print "========>  go"
     proj = Project(project_name, root_path)
-    proj.load_project_files()
-    print proj.html(jinja_env)
+    print "========>  get files", time.time() - start[0]
+
+    for pyfile in proj.files.itervalues():
+        pyfile.get_ast(proj.root_path)
+    print "========>  ast", time.time() - start[0]
+
+    map(File.get_imports, proj.files.itervalues())
+    print "========>  imports", time.time() - start[0]
+
+    map(File.get_docstring, proj.files.itervalues())
+    print "========>  docstring", time.time() - start[0]
+
+    proj.html(proj.jinja_env)
+    print "========>  html", time.time() - start[0]
 
 
 

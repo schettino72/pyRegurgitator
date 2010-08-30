@@ -20,6 +20,7 @@ def task_regurgitator_map():
 #     pickle load ast from file
 #
 # - integrate with doit
+# - link on import list (identify project modules)
 # - package page include import graph
 # - module page - list of all imports at any level
 
