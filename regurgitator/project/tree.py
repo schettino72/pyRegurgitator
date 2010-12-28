@@ -212,7 +212,14 @@ class Project(object):
                 self.folders[parts[0]].folders.append(self.folders[folder])
 
 
+    def html_file_path(self, file_obj):
+        """get file path where html file will be created"""
+        return os.path.join(self.output, "%s.html" % file_obj.ref)
 
+
+    ## generate HTML methods
+
+    # FIXME remove ".html" from pages
     def html(self, jinja_env):
         """create HTML pages"""
         self.html_index()
@@ -250,7 +257,7 @@ class Project(object):
         """create HTML for file pages"""
         parents = [self.folders[p] for p in file_obj.parent_list()]
 
-        page_path = os.path.join(self.output, "%s.html" % file_obj.ref)
+        page_path = self.html_file_path(file_obj)
         file_page = open(page_path, 'w')
         file_page.write(template.render(project=self, file_obj=file_obj,
                                         parents=parents))
