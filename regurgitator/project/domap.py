@@ -7,7 +7,7 @@ import os
 
 from doit.tools import create_folder
 
-from regurgitator.project import tree
+from regurgitator.project.core import Project
 
 OUTPUT_FOLDER = "_html"
 PROJECT_PATH = '/home/eduardo/src/pyregurgitator'
@@ -16,7 +16,7 @@ PROJECT_NAME = ROOT_PATH.split('/')[-1]
 
 # Project instance -> this should be create within a task but doit doesnt
 # support the creation of tasks dynamically
-PROJ = tree.Project(PROJECT_NAME, ROOT_PATH)
+PROJ = Project(PROJECT_NAME, ROOT_PATH)
 
 def task_html():
     # index page

@@ -5,7 +5,7 @@
 import sys
 from optparse import OptionParser
 
-from regurgitator.project import tree
+from regurgitator.project.core import create_project_map
 
 
 def main():
@@ -18,7 +18,7 @@ Prints generated HTML in stdout.
     (options, args) = parser.parse_args()
     if len(args) != 1:
         parser.error("incorrect number of arguments")
-    tree.create_project_map(args[0])
+    create_project_map(args[0])
 
 if __name__ == "__main__":
     main()
