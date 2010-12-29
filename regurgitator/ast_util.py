@@ -1,3 +1,5 @@
+"""AST utility functions"""
+
 from regurgitator import myast as ast
 
 def file2ast(file_name):

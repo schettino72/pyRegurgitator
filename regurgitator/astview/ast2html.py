@@ -1,3 +1,5 @@
+"""super pretty print of python source-code's AST"""
+
 import platform
 
 from regurgitator import myast as ast

@@ -9,7 +9,6 @@ import jinja2
 from regurgitator.ast_util import file2ast
 from regurgitator import myast as ast
 
-start = []
 
 def get_tracked_files_hg(path):
     """get all files being tracked by HG
@@ -26,6 +25,7 @@ def get_tracked_files_hg(path):
 
 
 class File(object):
+    """Represents a python file"""
     def __init__(self, path):
         """
         @param ast_node: if not given
@@ -42,10 +42,12 @@ class File(object):
 
     def get_ast(self, root_path):
         """get module's ast node"""
+        file_path = os.path.join(root_path, self.path)
         try:
-            self.ast = file2ast(os.path.join(root_path, self.path))
-        except Exception, e:
-            print "pymap (ERROR) %s" % e
+            self.ast = file2ast(file_path)
+        except Exception, exception:
+            print "pymap error creating AST for %s." % file_path
+            print str(exception)
 
 
     def get_docstring(self):
@@ -73,11 +75,13 @@ class File(object):
                 self.imports = []
 
             def visit_Import(self, node):
+                """callback for 'import' statement"""
                 self.imports.extend((None, n.name, n.asname, None)
                                     for n in node.names)
                 ast.NodeVisitor.generic_visit(self, node)
 
             def visit_ImportFrom(self, node):
+                """callback for 'import from' statement"""
                 self.imports.extend((node.module, n.name, n.asname, node.level)
                                     for n in node.names)
                 ast.NodeVisitor.generic_visit(self, node)
@@ -106,10 +110,15 @@ class File(object):
 
 
 class Folder(object):
-    """
+    """Represents a folder on file-system
+
     @ivar name: (str) folder name (only part after last '/')
     @ivar path: (str) '/' separate folder path
     @ivar ref: (str) "." separated folder path
+
+    # Project is responsible for setting this
+    @ivar folders: (list of Folder)
+    @ivar files: (list of File)
     """
     def __init__(self, path):
         """
@@ -152,6 +161,7 @@ class Folder(object):
 
 
     def dump(self):
+        """return str with information of all folder content"""
         return ("Folder(%s){\n  folders=[%s]\n  files=[%s]}" %
                 (self.path, ", ".join(self.folders), ", ".join(self.files)))
 
@@ -180,33 +190,39 @@ class Project(object):
 
 
     def _init_files(self, file_list):
+        """create File objects (put on self.files)"""
         for path in file_list:
-#            print "pymap: init file: %s " % path
+            #print "pymap: init file: %s " % path
             # ignore non-python files
             if path.endswith(".py"):
                 self.files[path] = File(path)
 
 
     def _init_folders(self):
+        """create and initialize Folder objects (put on self.folders)"""
         # initialize folders
+        # get all folders that contain "tracked" files
         for path in self.files:
-#            print "pymap: processing file: %s " % path
-            folder, file_ = os.path.split(path)
+            #print "pymap: processing file: %s " % path
+            folder = os.path.split(path)[0]
             if folder not in self.folders:
                 new_folder = Folder(folder)
-                self.folders[folder] = Folder(folder)
+                self.folders[folder] = Folder(folder) #XXX create folder again?
+                # make sure all fold ancestors are added
                 for folder_path in new_folder.parent_list()[:-1]:
                     if folder_path not in self.folders:
                         self.folders[folder_path] = Folder(folder_path)
+            # add file to folder
             self.folders[folder].files.append(self.files[path])
 
-        # add sub-folders
+        # add sub-folders (this must be done after all Folder are created)
         for folder in self.folders.keys():
-#            print "pymap: init folder: %s " % folder
+            #print "pymap: init folder: %s " % folder
             if not folder:
                 continue # skip root folder
             parts = folder.rsplit('/', 1)
             if len(parts) == 1:
+                # root folder
                 self.folders[''].folders.append(self.folders[folder])
             else:
                 self.folders[parts[0]].folders.append(self.folders[folder])
@@ -220,7 +236,7 @@ class Project(object):
     ## generate HTML methods
 
     # FIXME remove ".html" from pages
-    def html(self, jinja_env):
+    def html(self):
         """create HTML pages"""
         self.html_index()
 
@@ -267,7 +283,10 @@ class Project(object):
 
 
 def create_project_map(project_path):
-    """ """
+    """create all HTML for a project"""
+    # list with timestamps to measure speed of every step
+    start = []
+
     # setup
     root_path = os.path.abspath(project_path)
     project_name = root_path.split('/')[-1]
@@ -288,10 +307,6 @@ def create_project_map(project_path):
     map(File.get_docstring, proj.files.itervalues())
     print "========>  docstring", time.time() - start[0]
 
-    proj.html(proj.jinja_env)
+    proj.html()
     print "========>  html", time.time() - start[0]
 
-
-
-if __name__ == "__main__":
-    create_project_map("/home/eduardo/src/pyregurgitator")
