@@ -247,4 +247,5 @@ left: 50%;
     print ("</body></html>")
 
 if __name__ == "__main__":
-    main('python.asdl')
+    import sys
+    main(sys.argv[1])

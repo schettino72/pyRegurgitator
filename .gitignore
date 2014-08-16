@@ -6,3 +6,5 @@ __pycache__
 doc/_build
 MANIFEST
 dist
+
+_output
