@@ -1,8 +1,8 @@
 """super pretty print of python source-code's AST"""
 
 import platform
-
 import ast
+
 from regurgitator.ast_util import file2ast
 
 # python2.5

@@ -15,12 +15,14 @@ def task_asdl():
             'targets': ['_output/python-asdl.html'],
             }
 
-# SAMPLES = glob.glob("samples/*.py")
-# def task_ast():
-#     for sample in SAMPLES:
-#         target = "%s.html" % sample[:-3]
-#         yield {'name': sample,
-#                'actions':["python ast2html.py %s > %s" % (sample, target)],
-#                'file_dep': ['ast2html.py', sample],
-#                'targets': [target]
-#                }
+import glob
+
+SAMPLES = glob.glob("samples/*.py")
+def task_ast():
+    for sample in SAMPLES:
+        target = "_output/%s.html" % sample[8:-3]
+        yield {'name': sample,
+               'actions':["python regurgitator/ast2html.py %s > %s" % (sample, target)],
+               'file_dep': ['regurgitator/ast2html.py', sample],
+               'targets': [target]
+               }
