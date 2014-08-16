@@ -7,7 +7,7 @@ import time
 import jinja2
 
 from regurgitator.ast_util import file2ast
-from regurgitator import myast as ast
+import ast
 
 
 def get_tracked_files_hg(path):
@@ -21,6 +21,19 @@ def get_tracked_files_hg(path):
          "--repository", path],
         stdout=subprocess.PIPE).communicate()[0]
     return [f.strip() for f in output.splitlines()]
+
+
+def get_tracked_files_git(path):
+    """get all files being tracked by GIT
+
+    @param path: (str) repository root directory
+    @return: (list -str) relative file paths
+    """
+    output = subprocess.check_output(
+        ['git', 'ls-tree', '--name-only', '-r', '--full-tree', 'HEAD', path],
+        universal_newlines=True)
+    return [f.strip() for f in output.splitlines()]
+
 
 
 
@@ -40,14 +53,17 @@ class File(object):
         self.imports = None
 
 
+    def __lt__(self, other):
+        return self.path < other.path
+
     def get_ast(self, root_path):
         """get module's ast node"""
         file_path = os.path.join(root_path, self.path)
         try:
             self.ast = file2ast(file_path)
-        except Exception, exception:
-            print "pymap error creating AST for %s." % file_path
-            print str(exception)
+        except Exception as exception:
+            print("pymap error creating AST for %s." % file_path)
+            print(str(exception))
 
 
     def get_docstring(self):
@@ -159,6 +175,8 @@ class Folder(object):
     def __repr__(self):
         return "Folder(%s)" % self.path
 
+    def __lt__(self, other):
+        return self.path < other.path
 
     def dump(self):
         """return str with information of all folder content"""
@@ -184,7 +202,7 @@ class Project(object):
             trim_blocks=True)
 
         # initialization of project files/folders
-        file_list = get_tracked_files_hg(self.root_path)
+        file_list = get_tracked_files_git(self.root_path)
         self._init_files(file_list)
         self._init_folders()
 
@@ -216,7 +234,7 @@ class Project(object):
             self.folders[folder].files.append(self.files[path])
 
         # add sub-folders (this must be done after all Folder are created)
-        for folder in self.folders.keys():
+        for folder in list(self.folders.keys()):
             #print "pymap: init folder: %s " % folder
             if not folder:
                 continue # skip root folder
@@ -241,11 +259,11 @@ class Project(object):
         self.html_index()
 
         folder_template = self.jinja_env.get_template("folder.html")
-        for folder_obj in self.folders.itervalues():
+        for folder_obj in self.folders.values():
             self.html_folder(folder_template, folder_obj)
 
         file_template = self.jinja_env.get_template("file.html")
-        for file_obj in self.files.itervalues():
+        for file_obj in self.files.values():
             self.html_file(file_template, file_obj)
 
     def html_index(self):
@@ -293,20 +311,20 @@ def create_project_map(project_path):
 
     start.append(time.time())
 
-    print "========>  go"
+    print("========>  go")
     proj = Project(project_name, root_path)
-    print "========>  get files", time.time() - start[0]
+    print("========>  get files", time.time() - start[0])
 
-    for pyfile in proj.files.itervalues():
+    for pyfile in proj.files.values():
         pyfile.get_ast(proj.root_path)
-    print "========>  ast", time.time() - start[0]
+    print("========>  ast", time.time() - start[0])
 
-    map(File.get_imports, proj.files.itervalues())
-    print "========>  imports", time.time() - start[0]
+    list(map(File.get_imports, iter(proj.files.values())))
+    print("========>  imports", time.time() - start[0])
 
-    map(File.get_docstring, proj.files.itervalues())
-    print "========>  docstring", time.time() - start[0]
+    list(map(File.get_docstring, iter(proj.files.values())))
+    print("========>  docstring", time.time() - start[0])
 
     proj.html()
-    print "========>  html", time.time() - start[0]
+    print("========>  html", time.time() - start[0])
 

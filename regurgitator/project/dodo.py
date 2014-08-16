@@ -9,7 +9,7 @@ def task_regurgitator_map():
     """creates a project map for pyRegurgitator"""
     return {'actions': [(create_folder, (OUTPUT_FOLDER,)),
                         'pymap ../..'],
-            'file_dep': ['tree.py']  + TEMPLATES,
+            'file_dep': ['core.py']  + TEMPLATES,
             'targets': [OUTPUT_FOLDER + '/index.html'],
             'clean': ['rm -rf %s' % OUTPUT_FOLDER],
             }

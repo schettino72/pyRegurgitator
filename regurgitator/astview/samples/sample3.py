@@ -1,4 +1,4 @@
-from __future__ import with_statement
+
 
 a = 5
 a += 3
@@ -6,27 +6,28 @@ b = 7
 exec('a+b', locals(), globals())
 
 try:
-    print a
-except Exception, exp:
-    print b
+    print(a)
+except Exception as exp:
+    print(b)
 else:
-    print 6
+    print(6)
 finally:
-    print a+b
+    print(a+b)
 
 while False:
-    print "x"
+    print("x")
 
 with 5 as f:
-    print f
+    print(f)
 
-g = [f*f for f in range(10) if x < 5]
+g = [x*x for x in range(10) if x < 5]
 
 True and False
 
 def myg():
     yield 5
     f = yield 7
+    print(f)
 
 if True:
     6

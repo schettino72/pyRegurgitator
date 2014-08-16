@@ -131,10 +131,10 @@ def node2html(node):
     class_ = node.cluster
     if class_ in ["basic_types", "python_types"]:
         class_ = node.name
-    print('<div class="node %s">' % class_)
-    print('<div class="class">%s</div>' % node.name)
+    print(('<div class="node %s">' % class_))
+    print(('<div class="class">%s</div>' % node.name))
     for param in node.params:
-        print('<span class="param %s">%s</span>' % (param.type, param.name))
+        print(('<span class="param %s">%s</span>' % (param.type, param.name)))
     print ('</div>')
 
 
@@ -158,7 +158,7 @@ def main(file_name):
 
 
     # calculate cluster nodes.
-    for n in nodes.itervalues():
+    for n in nodes.values():
         clusters[n.cluster].nodes.append(n)
 
 
@@ -223,21 +223,21 @@ left: 50%;
 
 </style>
 """
-    print ('<html><head>%s</head><body>' % head)
+    print(('<html><head>%s</head><body>' % head))
 
     cols = {1: ["mod", "stmt", "python_types", "basic_types"],
             2: ["expr", "slice", "expr_context", "operator",
                 "boolop", "cmpop", "unaryop"],
             }
     for col in [1, 2]:
-        print ('<div class="col%s">' % col)
+        print(('<div class="col%s">' % col))
         for clu_name in cols[col]:
             clu = clusters[clu_name]
             title = clu.name
             if title in ["basic_types", "python_types"]:
                 title = ""
-            print ('<div class="cluster %s"><span>%s</span><div>' %
-                   (clu.name, title))
+            print(('<div class="cluster %s"><span>%s</span><div>' %
+                   (clu.name, title)))
             for n in sorted(clu.nodes, key=lambda x:x.name):
                 node2html(n)
             print ('</div></div>')

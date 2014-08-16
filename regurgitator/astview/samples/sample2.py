@@ -1,6 +1,6 @@
 """Task and actions classes."""
 import subprocess, sys
-import StringIO
+import io
 import inspect
 import types
 import os
@@ -79,8 +79,8 @@ class CmdAction(BaseAction):
                 if not line and process.poll() != None:
                     break
 
-        output = StringIO.StringIO()
-        errput = StringIO.StringIO()
+        output = io.StringIO()
+        errput = io.StringIO()
         t_out = Thread(target=print_process_output,
                        args=(process, process.stdout, output, out))
         t_err = Thread(target=print_process_output,
@@ -209,7 +209,7 @@ class PythonAction(BaseAction):
         extra_args.update(self.task.options)
         kwargs = self.kwargs.copy()
 
-        for key in extra_args.keys():
+        for key in list(extra_args.keys()):
             # check key is a positional parameter
             if key in argspec_args:
                 arg_pos = argspec_args.index(key)
@@ -247,9 +247,9 @@ class PythonAction(BaseAction):
         """
         # set std stream
         old_stdout = sys.stdout
-        output = StringIO.StringIO()
+        output = io.StringIO()
         old_stderr = sys.stderr
-        errput = StringIO.StringIO()
+        errput = io.StringIO()
 
         out_list = [output]
         if out:
@@ -270,9 +270,9 @@ class PythonAction(BaseAction):
                 returned_value = self.py_callable(*self.args,**kwargs)
             # in python 2.4 SystemExit and KeyboardInterrupt subclass
             # from Exception.
-            except (SystemExit, KeyboardInterrupt), exception:
+            except (SystemExit, KeyboardInterrupt) as exception:
                 raise
-            except Exception, exception:
+            except Exception as exception:
                 raise TaskError("PythonAction Error", exception)
         finally:
             # restore std streams /log captured streams
@@ -386,7 +386,7 @@ class Task(object):
 
         getargs = getargs or {} #default
         # check task attributes input
-        for attr, valid_list in self.valid_attr.iteritems():
+        for attr, valid_list in self.valid_attr.items():
             self.check_attr_input(name, attr, locals()[attr], valid_list)
 
         self.name = name
@@ -458,7 +458,7 @@ class Task(object):
 
     def _init_getargs(self):
         # getargs also define implicit task dependencies
-        for key, desc in self.getargs.iteritems():
+        for key, desc in self.getargs.items():
             # check format
             parts = desc.split('.')
             if len(parts) != 2:
@@ -541,8 +541,8 @@ class Task(object):
         """Execute task's clean"""
         # if clean is True remove all targets
         if self._remove_targets is True:
-            files = filter(os.path.isfile, self.targets)
-            dirs = filter(os.path.isdir, self.targets)
+            files = list(filter(os.path.isfile, self.targets))
+            dirs = list(filter(os.path.isdir, self.targets))
 
             # remove all files
             for file_ in files:
@@ -601,8 +601,8 @@ def dict_to_task(task_dict):
                           (task_dict['name'],task_dict))
 
     # user friendly. dont go ahead with invalid input.
-    for key in task_dict.keys():
-        if key not in Task.valid_attr.keys():
+    for key in list(task_dict.keys()):
+        if key not in list(Task.valid_attr.keys()):
             raise InvalidTask("Task %s contains invalid field: '%s'"%
                               (task_dict['name'],key))
 

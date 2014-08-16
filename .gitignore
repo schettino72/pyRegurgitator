@@ -1,0 +1,8 @@
+__pycache__
+*.pyc
+*.egg-info
+.doit.db*
+.coverage
+doc/_build
+MANIFEST
+dist

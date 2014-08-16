@@ -7,5 +7,5 @@ class MyClass(object):
 
     def do_x(a,b=None):
         my_sum = max_something + a
-        print my_sum
+        print(my_sum)
         return b is None

@@ -1,6 +1,6 @@
 #! /usr/bin/env python
 
-from distutils.core import setup
+from setuptools import setup
 
 # use README file as long_description
 readme = open('README')
@@ -10,11 +10,11 @@ readme.close()
 
 setup(name = 'pyRegurgitator',
       description = 'pyRegurgitator - Tools for analysing python code',
-      version = '0.1.1',
+      version = '0.2.dev0',
       license = 'MIT',
       author = 'Eduardo Naufel Schettino',
       author_email = 'schettino72@gmail.com',
-      url = 'http://bitbucket.org/schettino72/pyregurgitator/',
+      url = 'http://github.com/schettino72/pyregurgitator/',
       classifiers = ['Development Status :: 3 - Alpha',
                      'Environment :: Console',
                      'Intended Audience :: Developers',
@@ -22,8 +22,7 @@ setup(name = 'pyRegurgitator',
                      'Natural Language :: English',
                      'Operating System :: OS Independent',
                      'Operating System :: POSIX',
-                     'Programming Language :: Python :: 2.5',
-                     'Programming Language :: Python :: 2.6',
+                     'Programming Language :: Python :: 3.3',
                      'Topic :: Software Development',
                      ],
 

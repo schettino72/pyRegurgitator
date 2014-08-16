@@ -1,0 +1,7 @@
+
+
+0.2.0
+=========
+
+ - add support for python 3.3
+ - drop support for python 2

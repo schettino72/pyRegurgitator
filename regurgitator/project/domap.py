@@ -29,7 +29,7 @@ def task_html():
 
     # folder pages
     folder_template = PROJ.jinja_env.get_template("folder.html")
-    for folder_obj in PROJ.folders.itervalues():
+    for folder_obj in PROJ.folders.values():
         yield{'name': 'folder-%s' % folder_obj.ref,
               'actions': [(PROJ.html_folder, (folder_template, folder_obj))],
               # FIXME use task result where task get files+folders from folder_obj
@@ -39,7 +39,7 @@ def task_html():
 
     # file pages
     file_template = PROJ.jinja_env.get_template("file.html")
-    for file_obj in PROJ.files.itervalues():
+    for file_obj in PROJ.files.values():
         yield{'name': 'file-%s' % file_obj.ref,
               'actions': [(file_obj.get_ast, [ROOT_PATH]),
                           (file_obj.get_docstring,),

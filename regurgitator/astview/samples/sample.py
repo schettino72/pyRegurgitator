@@ -14,7 +14,7 @@ line2"""
 a = 2
 b = 5
 t = a + b
-print t
+print(t)
 
 
 def xxxx(a,b,c=5):
@@ -30,3 +30,5 @@ t=7;y=8
 def nothing():
     """multiple
     with identation"""
+    time()
+    ascitime()

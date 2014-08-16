@@ -2,7 +2,7 @@
 
 import platform
 
-from regurgitator import myast as ast
+import ast
 from regurgitator.ast_util import file2ast
 
 # python2.5
@@ -215,7 +215,7 @@ class AstNode(object):
         @returns string
         """
         attrs = ["%s=%s" % (k, v) for k,v in self.attrs]
-        fields = ["%s=%s" % (k, v.to_text()) for k,v in self.fields.iteritems()]
+        fields = ["%s=%s" % (k, v.to_text()) for k,v in self.fields.items()]
         return "%s(%s)" % (self.class_, ", ".join(attrs + fields))
 
     def to_html(self):
@@ -256,7 +256,7 @@ class AstNode(object):
         # divide fields into 2 groups: stmt_list & non_stmt
         stmt_list = {}
         non_stmt = {}
-        for k,v in self.fields.iteritems():
+        for k,v in self.fields.items():
             if k in ('body', 'handlers', 'orelse', 'finalbody'):
                 stmt_list[k] = v
             else:
@@ -273,10 +273,10 @@ class AstNode(object):
         n_stmts = '<tr><td class="field_name">%s</td><td>%s</td></tr>'
         n_close = '</table><div>'
 
-        field_names = [k for k in class_info.get('order', non_stmt.keys())]
+        field_names = [k for k in class_info.get('order', list(non_stmt.keys()))]
         fields = [non_stmt[v].to_html() for v in field_names]
         # sorted because by lucky correct order is the same as alphabetical order
-        stmts = [n_stmts% (k,v.to_html()) for k,v in sorted(stmt_list.iteritems())]
+        stmts = [n_stmts% (k,v.to_html()) for k,v in sorted(stmt_list.items())]
 
         html = n_head % (category , self.class_, ", ".join(attrs))
         if category == 'stmt':
@@ -290,7 +290,7 @@ class AstNode(object):
 
     def to_map(self):
         items = []
-        for f in self.fields.itervalues():
+        for f in self.fields.values():
             items.extend(f.to_map())
         return items
 
@@ -314,7 +314,7 @@ def ast2txt(filename):
     lines = file2lines(filename)
     tree = AstNode(ct, '', lines, None)
 
-    print tree.to_text()
+    print((tree.to_text()))
     #print "----------------"
     #print ast.dump(ct, include_attributes=True)
 
@@ -328,7 +328,7 @@ def ast2map(filename):
 
     # map
     for x in tree.to_map():
-        print x
+        print(x)
 
 
 def ast2html(filename):
@@ -352,10 +352,10 @@ def ast2html(filename):
 .code{background-color:#ff8800;}
 pre{font-size:13px;margin-bottom:0;}
 """
-    print '<html><head><style type="text/css">%s</style></head>' % style
-    print '<body><h4>%s</h4>' % filename
-    print tree.to_html()
-    print '</body></html>'
+    print('<html><head><style type="text/css">%s</style></head>' % style)
+    print('<body><h4>%s</h4>' % filename)
+    print(tree.to_html())
+    print('</body></html>')
 
 
 if __name__ == "__main__":
