@@ -3,167 +3,253 @@
 This was coded only to be able to convert python's ASDL.
 I have not studied ASDL specification so the parsing is probably incomplete!
 It uses a quick & dirty (inneficient and naive) parsing, but it did the job :)
-I did cheat making sure constructors are define in a single line.
+
+Python code is represented as a `tree`.
+Each `node` of the tree is an instance of a node `Type`.
+Each type belong a Category.
+Each Type define `attributes` and `fields`.
+Attributes describe which properties a node of that type has.
+Fields describe the quantity and the category of child nodes.
 """
 
-ASDL_TYPES = ['identifier', 'int', 'string', 'object', 'bool']
+import sys
+
 LANG_TYPES_STR = 'python_types'
 
-class Param(object):
-    """Node's Param"""
-    def __init__(self, _type, name):
-        self.type = _type.strip()
-        self.name = name.strip()
-        if self.type[-1] in "*?":
-            self.name = self.type[-1] + self.name
-            self.type = self.type[:-1]
 
-class Node(object):
-    def __init__(self, name, cluster, params):
+class Field:
+    """Type's Field
+
+    qualifier represent the quantity of child nodes for this field
+      * 0 to N
+      ? 0 or 1
+    """
+    def __init__(self, name, cat_name):
+        self.name = name.strip() # the field name
+        # extract qualifier from cat_name string
+        cat_name = cat_name.strip()
+        if cat_name[-1] in "*?":
+            self.qualifier = cat_name[-1]
+            self.cat_name = cat_name[:-1]
+        else:
+            self.cat_name = cat_name
+            self.qualifier = ''
+
+
+class Type:
+    """A node type in an AST"""
+    def __init__(self, name, cat_name, fields, attributes):
+        """:param str fields: unparsed field definition"""
         self.name = name
-        self.cluster = cluster
-        self.params = []
-        for par in params:
+        self.cat_name = cat_name
+        self.fields = [] # list of Field
+        # atributes saved as string unparsed. currently not used
+        self.attributes = attributes
+        for par in fields:
             if not par:
                 continue
             parts = par.strip().split(' ')
-            self.params.append(Param(*parts))
+            self.fields.append(Field(parts[1], parts[0]))
 
-class Cluster(object):
-    def __init__(self, name, attributes):
-        self.name = name
-        self.attributes = attributes
-        self.nodes = []
+    def __lt__(self, other):
+        return self.name < other.name
 
 
+class Category:
+    """Category is an Abstract Type that may have more than derived Type"""
+    def __init__(self, cat_name, types, builtin=False):
+        self.cat_name = cat_name
+        self.types = types # list os strings
+        self.builtin = builtin
 
-############### ASDL parsing
 
-def get_braces_content(data):
-    """extract data from within comma separated, round-braces string
-    return list of strings
+class ASDL:
+    """parse an asdl file
     """
-    left_brace = data.split('(')
-    if len(left_brace) > 1:
-        return left_brace[1].split(')')[0].split(',')
-    return []
+    def __init__(self, file_name):
+        self.cats = {}
+        self.types = {}
+
+        # 0 - read the file
+        with open(file_name, 'r') as asdl_file:
+            asdl_lines = asdl_file.readlines()
+
+        ASDL_TYPES = ['identifier', 'int', 'string', 'object', 'bool']
+        for name in ASDL_TYPES:
+            type_name = name
+            self.cats[name] = Category(name, [type_name], builtin=True)
+            self.types[type_name] = Type(type_name, name, '', '')
+
+        # split content into a list of definitions
+        definitions = self.get_asdl_definitions(asdl_lines)
+
+        # prase and set self.clusters, self.types
+        for definition in definitions:
+            self.parse_definition(definition)
 
 
-def get_asdl_definitions(asdl_file_name):
-    """Read an ASDL file and returns a list
-    with definitions (just the unprocessed strings)
-    """
-    # 0 - read the file
-    asdl_file = open(asdl_file_name, 'r')
-    asdl = asdl_file.readlines()
-    asdl_file.close()
+    @staticmethod
+    def get_asdl_definitions(asdl_lines):
+        """Read an ASDL file and returns a list
+        with definitions (just the unprocessed strings)
+        """
+        # 1 - remove comments
+        asdl_no_comments = [line.split('--')[0] for line in asdl_lines]
 
-    # 1 - remove comments
-    asdl = [line.split('--')[0] for line in asdl]
+        # 2 - get content part. Everything between {}. just handle one {}
+        left_brace = "".join(asdl_no_comments).split('{')
+        assert len(left_brace) == 2
+        right_brace = left_brace[1].split('}')
+        assert len(right_brace) == 2
+        content = right_brace[0]
 
-    # 2 - get content part. Everything between {}. just handle one {}
-    left_brace = "".join(asdl).split('{')
-    assert len(left_brace) == 2
-    right_brace = left_brace[1].split('}')
-    assert len(right_brace) == 2
-    content = right_brace[0]
+        # 3 - break content into definitions
+        # a definition is something like
+        #
+        # xxx = yyy
+        #     | zzz
+        #
+        # a definition is over when another line with a `=` is found
+        definitions = []
+        current = None
+        for line in content.splitlines(1):
+            if not line.strip(): # ignore blank lines
+                continue
+            #print "--->", line
+            if "=" in line:
+                if current is not None:
+                    definitions.append(current)
+                current = ''
+            current += line
+        definitions.append(current)
 
-    # 3 - break content into definitions
-    definitions = []
-    def_id = -1
-    for line in content.splitlines(1):
-        if not line.strip(): # ignore blank lines
-            continue
-        #print "--->", line
-        if "=" in line:
-            definitions.append('')
-            def_id += 1
-        definitions[def_id] += line
-
-    return definitions
+        return definitions
 
 
 
-def get_asdl_nodes(definitions):
-    """get nodes and clusters from asdl definitions
-    returns pair of dicts (clusters, nodes)
-    """
-    clusters = {}
-    nodes = {}
-
-    # break left(name) and right(constructors) side of a definition
-    for defi in definitions:
-        # extract definition name
+    def parse_definition(self, defi):
+        """parse a definition. A definition contains one Category and its types.
+        """
+        # break left(cat_name) and right(constructors) side of a definition
+        # extract definition cat_name
         _left, _right = defi.split('=')
-        defi_name = _left.strip()
-        right = '|' + _right # to identify constructors
+        cat_name = _left.strip()
+        right_parts = _right.split('attributes')
+        assert len(right_parts) < 3
+
+        # get attributes - not all definitions contain attributes
+        if len(right_parts) == 2:
+            attrs = self.get_braces_content(right_parts[1])
+        else:
+            attrs = []
 
         # read lines, extract constructors & attributes
-        attrs = []
-        constructors = []
-        for full_line in right.splitlines():
-            line = full_line.strip()
-            if line[0] in '|':
-                constructors.extend([c.strip() for c in line[1:].split('|')])
-            elif line.strip().startswith('attributes'):
-                attrs = get_braces_content(line)
+        types = [c.strip() for c in right_parts[0].split('|')]
 
-        # if just one constructor, it is not a class but a type
-        if len(constructors) == 1:
-            if LANG_TYPES_STR not in clusters:
-                clusters[LANG_TYPES_STR] = Cluster(LANG_TYPES_STR, [])
-            nodes[defi_name] = Node(defi_name, LANG_TYPES_STR,
-                                    get_braces_content(constructors[0]))
+        # if just one type in definition
+        if len(types) == 1:
+            # in the ASDL types from categories that have only one type
+            # are not named.
+            type_name = cat_name
+            type_names = [type_name]
+            field_list = self.get_braces_content(types[0])
+            self.types[type_name] = Type(type_name, cat_name, field_list, attrs)
         # iterate over constructors
         else:
-            clusters[defi_name] = Cluster(defi_name, attrs)
-            for cons in constructors:
+            type_names = []
+            for cons in types: # for each constructor
                 name = cons.split('(')[0].strip()
-                nodes[name] = Node(name, defi_name,
-                                   get_braces_content(cons))
-    return clusters, nodes
+                type_names.append(name)
+                field_list = self.get_braces_content(cons)
+                self.types[name] = Type(name, cat_name, field_list, attrs)
+
+        # create category
+        self.cats[cat_name] = Category(cat_name, type_names)
+
+
+    @staticmethod
+    def get_braces_content(data):
+        """extract data from within comma separated, round-braces string
+        return list of strings
+
+        >>> ASDL.get_braces_content('(a,b,c)')
+        ['a', 'b', 'c']
+        """
+        left_brace = data.split('(')
+        if len(left_brace) > 1:
+            return left_brace[1].split(')')[0].split(',')
+        return []
 
 
 
-#
-# HTML stuff
-def node2html(node):
-    class_ = node.cluster
-    if class_ in ["basic_types", "python_types"]:
-        class_ = node.name
-    print(('<div class="node %s">' % class_))
-    print(('<div class="class">%s</div>' % node.name))
-    for param in node.params:
-        print(('<span class="param %s">%s</span>' % (param.type, param.name)))
-    print ('</div>')
+
+################################################################
 
 
+class ASDL2HTML(ASDL):
+    """extend ASDL with methods to generate a HTML page"""
 
-def main(file_name):
-    # get clusters and nodes from asdl files
-    definitions = get_asdl_definitions(file_name)
-    clusters, nodes = get_asdl_nodes(definitions)
-
-    # add cluster with basic types
-    clusters['basic_types'] = Cluster("basic_types", [])
-    # add basic nodes
-    nodes.update([(name, Node(name, "basic_types", [])) for name in ASDL_TYPES])
-
-
-#     for c in clusters.itervalues():
-#         print c.name
-#     for n in nodes.itervalues():
-#         print n.name, "\b",
-#     print
+    @staticmethod
+    def render_type(ntype):
+        class_ = ntype.cat_name
+        print('<div class="type {}">'.format(class_))
+        print('<div>{}</div>'.format(ntype.name))
+        # render fields
+        for field in ntype.fields:
+            print('<span class="field {}">{}{}</span>'.format(
+                    field.cat_name, field.qualifier, field.name))
+        print('</div>')
 
 
-    # calculate cluster nodes.
-    for n in nodes.values():
-        clusters[n.cluster].nodes.append(n)
+    def get_builtin(self):
+        items = []
+        for c in self.cats.values():
+            if c.builtin:
+                items.append(c.types[0])
+        return items
+
+    def get_product_types(self):
+        # all categories that have a sigle type but are not built-ins
+        items = []
+        for c in self.cats.values():
+            if not c.builtin and len(c.types)==1:
+                items.append(c.types[0])
+        return items
+
+    def get_group(self, name):
+        if name == 'builtin':
+            return '', self.get_builtin()
+        if name == 'product_types':
+            return '', self.get_product_types()
+        cat = self.cats[name]
+        return cat.cat_name, cat.types
+
+    def render_body(self):
+        cols = {1: ["mod", "stmt", "product_types", "builtin"],
+                2: ["expr", "slice", "expr_context", "operator",
+                    "boolop", "cmpop", "unaryop"],
+                }
+
+        for col in [1, 2]:
+            print('<div class="col{}">'.format(col))
+            for group in cols[col]:
+                name, types = self.get_group(group)
+                print(('<div class="category %s"><span>%s</span><div>' %
+                       (name, name)))
+                for ntype in sorted(types):
+                    self.render_type(self.types[ntype])
+                print ('</div></div>')
+            print ('</div>')
 
 
-    # HTML
-    head = """
+    def render(self):
+        print('<html><head>{}</head><body>'.format(HTML_HEAD))
+        self.render_body()
+        print ("</body></html>")
+
+
+# HTML
+HTML_HEAD = """
 <style type="text/css">
 body{
 background-color:#b0c4de;
@@ -193,18 +279,18 @@ background-color:#b0c4de;
 .keyword{background-color:#006600}
 
 
-.cluster{
+.category{
 clear: both;
 }
 
-.node{
+.type{
 border: 1px solid #90a4be;
 margin: 2px;
 float: left;
 padding: 3px;
 }
 
-.param{
+.field{
 border:1px dashed black;
 padding: 2px;
 font-size:small;
@@ -223,29 +309,9 @@ left: 50%;
 
 </style>
 """
-    print(('<html><head>%s</head><body>' % head))
-
-    cols = {1: ["mod", "stmt", "python_types", "basic_types"],
-            2: ["expr", "slice", "expr_context", "operator",
-                "boolop", "cmpop", "unaryop"],
-            }
-    for col in [1, 2]:
-        print(('<div class="col%s">' % col))
-        for clu_name in cols[col]:
-            clu = clusters[clu_name]
-            title = clu.name
-            if title in ["basic_types", "python_types"]:
-                title = ""
-            print(('<div class="cluster %s"><span>%s</span><div>' %
-                   (clu.name, title)))
-            for n in sorted(clu.nodes, key=lambda x:x.name):
-                node2html(n)
-            print ('</div></div>')
-        print ('</div>')
 
 
-    print ("</body></html>")
+
 
 if __name__ == "__main__":
-    import sys
-    main(sys.argv[1])
+    ASDL2HTML(sys.argv[1]).render()

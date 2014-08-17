@@ -1,12 +1,25 @@
 from doitpy.pyflakes import Pyflakes
 
 
-DOIT_CONFIG = {'default_tasks': ['pyflakes']}
+DOIT_CONFIG = {'default_tasks': ['pyflakes', 'doctest']}
 
 
 def task_pyflakes():
     yield Pyflakes().tasks('*.py')
     yield Pyflakes().tasks('regurgitator/**/*.py')
+
+
+def task_test():
+    for module in ['regurgitator/asdl2html.py']:
+        yield {
+            'basename': 'doctest',
+            'name': module,
+            'file_dep': [module],
+            'actions': ['py.test --doctest-modules --color=yes ' + module],
+            'verbosity': 2,
+            }
+
+
 
 
 def task_asdl():

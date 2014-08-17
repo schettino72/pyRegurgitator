@@ -1,0 +1,17 @@
+ftp://ftp.cs.princeton.edu/techreports/1997/554.pdf
+https://github.com/python/cpython/blob/master/Parser/Python.asdl
+
+asdl
+========
+
+- asdl2html get built list from initial line
+- get all categories, hard-code only mod, stmt, expr
+- generate colors, or color palette
+- generate dict used by ast2html
+
+
+ast2html
+===========
+
+- rename ast2x
+- include ast2srcML
