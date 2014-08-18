@@ -1,0 +1,67 @@
+List of changes from previous release in the ASDL.
+
+python 2.6
+-----------
+
+ * `ClassDef`: added field `decorator_list`
+ * `excepthandler`: added attributes
+
+
+python 2.7
+------------
+
+ * `ImportFrom`: field `module` became optional
+ * `expr`: definition added types `Set`, `SetComp`, `DictComp`
+
+
+python 3.0
+------------
+
+ * removed builtin type `bool`
+ * `FunctionDef`: added field `returns`
+ * `ClassDef`: added fields `keywords`, `startargs`, `kwargs`
+ * `stmt` definition: removed `Print`
+ * `Raise`: fields where changed to `exc` and `cause`
+ * `ImportFrom`: field `module` became required
+ * `stmt` definition: removed `Exec`
+ * `stmt` definition: added `Nonlocal`
+ * `expr` definition: remove `Repr`
+ * `expr` definition: added `Bytes`
+ * `expr` definition: added `Ellipsis`
+ * `expr` definition: added `Starred`
+ * `slice` definition: removed `Ellipsis`
+ * `ExceptHandler`: field `identifier`'s type changed from `expr` to `identifier`
+ * `arguments`: changed fields
+ * added definition `arg`
+
+
+python 3.1
+------------
+
+(no changes)
+
+
+python 3.2
+------------
+
+ * `ImportFrom`: field `module` became optional
+
+
+python 3.3
+------------
+
+ * added builtin `bytes`
+ * `With`: replace field `context_expr` and `option_vars` with `items`
+ * added definition for `withitem`
+ * `stmt` definition: replaced `TryExcept` and `TryFinally` with `Try`
+ * `expr` definition: added `YieldFrom`
+ * `Bytes` field `s`: changed type from `string` to `bytes`
+
+
+python 3.4
+-----------
+
+ * added builtin `singleton`
+ * `expr` definition: added NameConstant
+ * `arguments` definition: fields changes
+ * `arg` definition: added attributes
