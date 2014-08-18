@@ -74,9 +74,9 @@ class ASDL:
         with open(file_name, 'r') as asdl_file:
             asdl_lines = asdl_file.readlines()
 
-        ASDL_TYPES = ['identifier', 'int', 'string', 'object', 'bool']
-        for name in ASDL_TYPES:
-            type_name = name
+        # first line contains list of built-in types
+        for name in asdl_lines[0].split(','):
+            type_name = name.split(' ')[-1]
             self.cats[name] = Category(name, [type_name], builtin=True)
             self.types[type_name] = Type(type_name, name, '', '')
 
@@ -189,111 +189,134 @@ class ASDL:
 class ASDL2HTML(ASDL):
     """extend ASDL with methods to generate a HTML page"""
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        self.css = {} # map category to a CSS color
+
+        # divide categories into groups
+        self.builtin_types = []
+        self.product_types = [] # the name "product" comes from ASDL spec
+        self.sum_cats = []
+        for cat in self.cats.values():
+            if cat.cat_name in ('mod', 'stmt', 'expr'):
+                continue
+            if cat.builtin:
+                self.builtin_types.append(cat.types[0])
+            elif len(cat.types) == 1:
+                self.product_types.append(cat.types[0])
+            else:
+                self.sum_cats.append(cat.cat_name)
+        self.product_types.sort()
+        self.builtin_types.sort()
+        self.sum_cats.sort()
+
+
+
+        palette_soft = ['#CFD0D2', '#E9D4A7', '#C1D18A', '#B296C7',
+                       '#55BEED', '#F384AE', '#F1753F']
+        palette_strong = ['#FFE617', '#E8272F', '#E5185D',
+                          '#5F3577', '#238ACC', '#143B86', '#799155',
+                          '#09811C', '#C05C20', '#474D4D',
+                          '#003F2E', '#FDB717', '#EF4638']
+        palette_all = palette_soft + palette_strong
+
+        # set color for builtins
+        for cat_name in self.builtin_types:
+            rules = '{{background-color:{}; border: 2px solid black;}}'
+            self.css[cat_name] = rules.format(palette_soft.pop())
+
+
+
+        # all categories that have a sigle type but are not built-ins
+        # set color for builtins
+        for cat_name in self.product_types + self.sum_cats:
+            rules = '{{background-color:{};}}'
+            self.css[cat_name] = rules.format(palette_all.pop())
+
+
     @staticmethod
     def render_type(ntype):
+        lines = []
         class_ = ntype.cat_name
-        print('<div class="type {}">'.format(class_))
-        print('<div>{}</div>'.format(ntype.name))
+        lines.append('<div class="type {}">'.format(class_))
+        lines.append('<div>{}</div>'.format(ntype.name))
         # render fields
+        tmpl = '<span title="{t}" class="field {t}">{q}{n}</span>'
         for field in ntype.fields:
-            print('<span class="field {}">{}{}</span>'.format(
-                    field.cat_name, field.qualifier, field.name))
-        print('</div>')
+            lines.append(tmpl.format(
+                    t=field.cat_name, q=field.qualifier, n=field.name))
+        lines.append('</div>')
+        return '\n'.join(lines)
 
-
-    def get_builtin(self):
-        items = []
-        for c in self.cats.values():
-            if c.builtin:
-                items.append(c.types[0])
-        return items
-
-    def get_product_types(self):
-        # all categories that have a sigle type but are not built-ins
-        items = []
-        for c in self.cats.values():
-            if not c.builtin and len(c.types)==1:
-                items.append(c.types[0])
-        return items
 
     def get_group(self, name):
+        """get a group of types to be displayed together in the HTML"""
         if name == 'builtin':
-            return '', self.get_builtin()
+            return '', self.builtin_types
         if name == 'product_types':
-            return '', self.get_product_types()
+            return '', self.product_types
         cat = self.cats[name]
         return cat.cat_name, cat.types
 
     def render_body(self):
-        cols = {1: ["mod", "stmt", "product_types", "builtin"],
-                2: ["expr", "slice", "expr_context", "operator",
-                    "boolop", "cmpop", "unaryop"],
+        cols = {1: ["mod", "stmt", "expr"],
+                2: self.sum_cats + ["product_types", "builtin"],
                 }
-
+        html = []
         for col in [1, 2]:
-            print('<div class="col{}">'.format(col))
+            html.append('<div class="col{}">'.format(col))
             for group in cols[col]:
                 name, types = self.get_group(group)
-                print(('<div class="category %s"><span>%s</span><div>' %
+                html.append(('<div class="category %s"><span>%s</span><div>' %
                        (name, name)))
                 for ntype in sorted(types):
-                    self.render_type(self.types[ntype])
-                print ('</div></div>')
-            print ('</div>')
+                    html.append(self.render_type(self.types[ntype]))
+                html.append('</div></div>')
+            html.append('</div>')
+        return '\n'.join(html)
+
+    def render_head(self):
+        intro = '<style type="text/css">'
+        outro = '</style>'
+        colors = '\n'.join('.{}{}'.format(n,c) for n,c in self.css.items())
+        return "\n".join((intro, HTML_HEAD, colors, outro))
 
 
     def render(self):
-        print('<html><head>{}</head><body>'.format(HTML_HEAD))
-        self.render_body()
-        print ("</body></html>")
+        html = ("<html>"
+                "  <head>{head}</head>"
+                "  <body>{body}</body>"
+                "</html>")
+        print(html.format(head=self.render_head(), body=self.render_body()))
 
 
 # HTML
 HTML_HEAD = """
-<style type="text/css">
 body{
 background-color:#b0c4de;
 }
 
-.mod{background-color:#555555;}
-.stmt{background-color:#ff8800;}
-.expr{background-color:#995522;}
-.expr_context{background-color:#cc0000;}
-.slice{background-color:#663322;}
-.boolop{background-color:#ffcc99;}
-.operator{background-color:#ff66ff;}
-.unaryop{background-color:#ffff33}
-.cmpop{background-color:ff6666}
 
-.bool{background-color:#ffffff}
-.identifier{background-color:cccccc}
-.int{background-color:#888888}
-.object{background-color:#555555}
-.string{background-color:#333333}
-
-
-.alias{background-color:#00CCff}
-.arguments{background-color:#0099CC}
-.comprehension{background-color:#009999}
-.excepthandler{background-color:#009966}
-.keyword{background-color:#006600}
-
+.mod {background-color: #8F5E46}
+.stmt {background-color: #9F8759}
+.expr {background-color: #96A1A9}
 
 .category{
 clear: both;
 }
 
 .type{
-border: 1px solid #90a4be;
+border: 1px solid #666666;
 margin: 2px;
 float: left;
 padding: 3px;
 }
 
 .field{
-border:1px dashed black;
+border:2px dashed black;
 padding: 2px;
 font-size:small;
+display: inline-block;
 }
 
 .col1{
@@ -306,8 +329,6 @@ position: absolute;
 width: 48%;
 left: 50%;
 }
-
-</style>
 """
 
 

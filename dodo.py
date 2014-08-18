@@ -1,3 +1,6 @@
+import os
+import glob
+
 from doitpy.pyflakes import Pyflakes
 
 
@@ -21,14 +24,19 @@ def task_test():
 
 
 
+#################################################
 
 def task_asdl():
-    return {'actions': ['python regurgitator/asdl2html.py python2.asdl > %(targets)s'],
-            'file_dep': ['python2.asdl', 'regurgitator/asdl2html.py'],
-            'targets': ['_output/python-asdl.html'],
+    cmd = 'python regurgitator/asdl2html.py {} > {}'
+    for fn in glob.glob('asdl/*.asdl'):
+        target = '_output/{}.html'.format(os.path.basename(fn))
+        yield {
+            'name': fn,
+            'actions': [cmd.format(fn, target)],
+            'file_dep': ['regurgitator/asdl2html.py', fn],
+            'targets': [target],
             }
 
-import glob
 
 SAMPLES = glob.glob("samples/*.py")
 def task_ast():

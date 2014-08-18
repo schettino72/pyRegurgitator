@@ -4,11 +4,8 @@ https://github.com/python/cpython/blob/master/Parser/Python.asdl
 asdl
 ========
 
-- asdl2html get built list from initial line
-- get all categories, hard-code only mod, stmt, expr
-- generate colors, or color palette
+- use entry-points
 - generate dict used by ast2html
-
 
 ast2html
 ===========
