@@ -27,12 +27,22 @@ def task_test():
 #################################################
 
 def task_asdl():
-    cmd = 'python regurgitator/asdl2html.py {} > {}'
+    cmd_html = 'python regurgitator/asdl2html.py {} > {}'
+    cmd_json = 'python regurgitator/asdl2html.py --format json {} > {}'
     for fn in glob.glob('asdl/*.asdl'):
-        target = '_output/{}.html'.format(os.path.basename(fn))
+        name = os.path.basename(fn)
+        target = '_output/{}.html'.format(name)
         yield {
-            'name': fn,
-            'actions': [cmd.format(fn, target)],
+            'name': name + '.html',
+            'actions': [cmd_html.format(fn, target)],
+            'file_dep': ['regurgitator/asdl2html.py', fn],
+            'targets': [target],
+            }
+
+        target = '_output/{}.json'.format(name)
+        yield {
+            'name': name + '.json',
+            'actions': [cmd_json.format(fn, target)],
             'file_dep': ['regurgitator/asdl2html.py', fn],
             'targets': [target],
             }

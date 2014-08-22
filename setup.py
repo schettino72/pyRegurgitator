@@ -26,8 +26,7 @@ setup(name = 'pyRegurgitator',
                      'Topic :: Software Development',
                      ],
 
-      packages = ['regurgitator',
-                  'regurgitator/astview', 'regurgitator/project'],
+      packages = ['regurgitator', 'regurgitator/project'],
       scripts = ['bin/ast2html', 'bin/pymap'],
       long_description = long_description,
       )

@@ -13,8 +13,9 @@ Fields describe the quantity and the category of child nodes.
 """
 
 import sys
+import argparse
+import json
 
-LANG_TYPES_STR = 'python_types'
 
 
 class Field:
@@ -149,8 +150,9 @@ class ASDL:
         # if just one type in definition
         if len(types) == 1:
             # in the ASDL types from categories that have only one type
-            # are not named.
-            type_name = cat_name
+            # might be named or not.
+            # If not named use cat_name as type_name.
+            type_name = types[0].split('(')[0].strip() or cat_name
             type_names = [type_name]
             field_list = self.get_braces_content(types[0])
             self.types[type_name] = Type(type_name, cat_name, field_list, attrs)
@@ -184,6 +186,27 @@ class ASDL:
 
 
 ################################################################
+
+class ASDL2JSON(ASDL):
+    def render(self):
+        types = {}
+        for asdl_type in self.types.values():
+            types[asdl_type.name] = self.type_dict(asdl_type)
+        print(json.dumps(types, sort_keys=True, indent=4))
+
+    @staticmethod
+    def type_dict(asdl_type):
+        order = []
+        fields = {}
+        for f in asdl_type.fields:
+            order.append(f.name)
+            fields[f.name] = {'cat':f.cat_name, 'q':f.qualifier}
+
+        return {
+            'category': asdl_type.cat_name,
+            'order': order,
+            'fields': fields,
+            }
 
 
 class ASDL2HTML(ASDL):
@@ -334,5 +357,22 @@ left: 50%;
 
 
 
+def asdlview(args):
+    """command line program to convert ASDL into HTML, JSON"""
+    parser = argparse.ArgumentParser(description='ASDL viewer')
+    parser.add_argument(
+        '-f', '--format', dest='format', metavar='FORMAT',
+        choices=('html', 'json'), default='html',
+        help='output format one of [%(choices)s], default=%(default)s')
+    parser.add_argument(
+        'asdl_file', metavar='ASDL', nargs=1,
+        help='ASDL file')
+
+    args = parser.parse_args(args)
+    if args.format == 'html':
+        ASDL2HTML(args.asdl_file[0]).render()
+    elif args.format == 'json':
+        ASDL2JSON(args.asdl_file[0]).render()
+
 if __name__ == "__main__":
-    ASDL2HTML(sys.argv[1]).render()
+    asdlview(sys.argv[1:])
