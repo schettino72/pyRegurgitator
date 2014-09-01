@@ -7,7 +7,7 @@ import os
 
 from doit.tools import create_folder
 
-from regurgitator.project.core import Project
+from .project.core import Project
 
 OUTPUT_FOLDER = "_html"
 PROJECT_PATH = '/home/eduardo/src/pyregurgitator'

@@ -9,11 +9,12 @@ DOIT_CONFIG = {'default_tasks': ['pyflakes', 'doctest']}
 
 def task_pyflakes():
     yield Pyflakes().tasks('*.py')
-    yield Pyflakes().tasks('regurgitator/**/*.py')
+    yield Pyflakes().tasks('pyreg/**/*.py')
 
 
 def task_test():
-    for module in ['regurgitator/asdl2html.py']:
+    """run tests"""
+    for module in ['pyreg/asdlview.py']:
         yield {
             'basename': 'doctest',
             'name': module,
@@ -27,15 +28,16 @@ def task_test():
 #################################################
 
 def task_asdl():
-    cmd_html = 'python regurgitator/asdl2html.py {} > {}'
-    cmd_json = 'python regurgitator/asdl2html.py --format json {} > {}'
+    """generate HTML and JSON for python ASDL"""
+    cmd_html = 'asdlview {} > {}'
+    cmd_json = 'asdlview --format json {} > {}'
     for fn in glob.glob('asdl/*.asdl'):
         name = os.path.basename(fn)
         target = '_output/{}.html'.format(name)
         yield {
             'name': name + '.html',
             'actions': [cmd_html.format(fn, target)],
-            'file_dep': ['regurgitator/asdl2html.py', fn],
+            'file_dep': ['pyreg/asdlview.py', fn],
             'targets': [target],
             }
 
@@ -43,17 +45,18 @@ def task_asdl():
         yield {
             'name': name + '.json',
             'actions': [cmd_json.format(fn, target)],
-            'file_dep': ['regurgitator/asdl2html.py', fn],
+            'file_dep': ['pyreg/asdlview.py', fn],
             'targets': [target],
             }
 
 
 SAMPLES = glob.glob("samples/*.py")
 def task_ast():
+    """generate HTML for AST of sample modules"""
     for sample in SAMPLES:
         target = "_output/%s.html" % sample[8:-3]
         yield {'name': sample,
-               'actions':["python regurgitator/ast2html.py %s > %s" % (sample, target)],
-               'file_dep': ['regurgitator/ast2html.py', sample],
+               'actions':["astview {} > {}".format(sample, target)],
+               'file_dep': ['pyreg/astview.py', sample],
                'targets': [target]
                }

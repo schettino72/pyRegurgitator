@@ -3,11 +3,12 @@
 import subprocess
 import os
 import time
+import ast
 
 import jinja2
 
-from regurgitator.ast_util import file2ast
-import ast
+from .ast_util import file2ast
+
 
 
 def get_tracked_files_hg(path):

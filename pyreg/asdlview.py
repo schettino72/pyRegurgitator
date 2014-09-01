@@ -6,15 +6,14 @@ It uses a quick & dirty (inneficient and naive) parsing, but it did the job :)
 
 Python code is represented as a `tree`.
 Each `node` of the tree is an instance of a node `Type`.
-Each type belong a Category.
+Each type belongs to a Category.
 Each Type define `attributes` and `fields`.
 Attributes describe which properties a node of that type has.
 Fields describe the quantity and the category of child nodes.
 """
 
-import sys
-import argparse
 import json
+import argparse
 
 
 
@@ -188,6 +187,7 @@ class ASDL:
 ################################################################
 
 class ASDL2JSON(ASDL):
+    """output ASDL in JSON format"""
     def render(self):
         types = {}
         for asdl_type in self.types.values():
@@ -301,7 +301,8 @@ class ASDL2HTML(ASDL):
     def render_head(self):
         intro = '<style type="text/css">'
         outro = '</style>'
-        colors = '\n'.join('.{}{}'.format(n,c) for n,c in self.css.items())
+        items = sorted(self.css.items())
+        colors = '\n'.join('.{}{}'.format(n,c) for n,c in items)
         return "\n".join((intro, HTML_HEAD, colors, outro))
 
 
@@ -357,7 +358,7 @@ left: 50%;
 
 
 
-def asdlview(args):
+def asdl_view(args=None):
     """command line program to convert ASDL into HTML, JSON"""
     parser = argparse.ArgumentParser(description='ASDL viewer')
     parser.add_argument(
@@ -374,5 +375,6 @@ def asdlview(args):
     elif args.format == 'json':
         ASDL2JSON(args.asdl_file[0]).render()
 
+
 if __name__ == "__main__":
-    asdlview(sys.argv[1:])
+    asdl_view()

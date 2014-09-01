@@ -3,8 +3,9 @@
 import platform
 import ast
 import json
+import argparse
 
-from regurgitator.ast_util import file2ast
+from .ast_util import file2ast
 
 
 # load ASDL based on python version
@@ -250,9 +251,28 @@ pre{font-size:13px;margin-bottom:0;}
     print('</body></html>')
 
 
+def ast_view(args=None):
+    """command line program to convert python module into AST data"""
+    description = """
+Super pretty-printer for python modules's AST(abstract syntax tree)."""
+
+    parser = argparse.ArgumentParser(description=description)
+    parser.add_argument(
+        '-f', '--format', dest='format', metavar='FORMAT',
+        choices=('html', 'map', 'txt'), default='html',
+        help='output format one of [%(choices)s], default=%(default)s')
+    parser.add_argument(
+        'py_file', metavar='MODULE', nargs=1,
+        help='python module')
+
+    args = parser.parse_args(args)
+    if args.format == 'html':
+        ast2html(args.py_file[0])
+    elif args.format == 'map':
+        ast2map(args.py_file[0])
+    elif args.format == 'html':
+        ast2map(args.py_file[0])
+
+
 if __name__ == "__main__":
-    import sys
-    filename = sys.argv[1]
-    #ast2txt(filename)
-    #ast2map(filename)
-    ast2html(filename)
+    ast_view()

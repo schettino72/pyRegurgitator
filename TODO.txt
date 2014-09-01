@@ -1,14 +1,14 @@
 ftp://ftp.cs.princeton.edu/techreports/1997/554.pdf
 https://github.com/python/cpython/blob/master/Parser/Python.asdl
 
-asdl
-========
-
-- use entry-points
-- generate dict used by ast2html
-
-ast2html
+astview
 ===========
 
-- rename ast2x
 - include ast2srcML
+
+0.2
+==========
+
+- use jinja2
+- website
+

@@ -26,8 +26,13 @@ setup(name = 'pyRegurgitator',
                      'Topic :: Software Development',
                      ],
 
-      packages = ['regurgitator', 'regurgitator/project'],
-      scripts = ['bin/ast2html', 'bin/pymap'],
+      packages = ['pyreg', 'pyreg/project'],
       long_description = long_description,
+      entry_points = {
+        'console_scripts': [
+            'asdlview = pyreg.asdlview:asdl_view',
+            'astview = pyreg.astview:ast_view',
+            ]
+        },
       )
 
