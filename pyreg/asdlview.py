@@ -15,6 +15,8 @@ Fields describe the quantity and the category of child nodes.
 import json
 import argparse
 
+import jinja2
+
 
 
 class Field:
@@ -215,6 +217,10 @@ class ASDL2HTML(ASDL):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self.css = {} # map category to a CSS color
+        self.jinja_env = jinja2.Environment(
+            loader=jinja2.PackageLoader('pyreg', 'templates'),
+            undefined=jinja2.StrictUndefined,
+            trim_blocks=True)
 
         # divide categories into groups
         self.builtin_types = []
@@ -234,7 +240,6 @@ class ASDL2HTML(ASDL):
         self.sum_cats.sort()
 
 
-
         palette_soft = ['#CFD0D2', '#E9D4A7', '#C1D18A', '#B296C7',
                        '#55BEED', '#F384AE', '#F1753F']
         palette_strong = ['#FFE617', '#E8272F', '#E5185D',
@@ -248,28 +253,11 @@ class ASDL2HTML(ASDL):
             rules = '{{background-color:{}; border: 2px solid black;}}'
             self.css[cat_name] = rules.format(palette_soft.pop())
 
-
-
         # all categories that have a sigle type but are not built-ins
         # set color for builtins
         for cat_name in self.product_types + self.sum_cats:
             rules = '{{background-color:{};}}'
             self.css[cat_name] = rules.format(palette_all.pop())
-
-
-    @staticmethod
-    def render_type(ntype):
-        lines = []
-        class_ = ntype.cat_name
-        lines.append('<div class="type {}">'.format(class_))
-        lines.append('<div>{}</div>'.format(ntype.name))
-        # render fields
-        tmpl = '<span title="{t}" class="field {t}">{q}{n}</span>'
-        for field in ntype.fields:
-            lines.append(tmpl.format(
-                    t=field.cat_name, q=field.qualifier, n=field.name))
-        lines.append('</div>')
-        return '\n'.join(lines)
 
 
     def get_group(self, name):
@@ -281,80 +269,13 @@ class ASDL2HTML(ASDL):
         cat = self.cats[name]
         return cat.cat_name, cat.types
 
-    def render_body(self):
-        cols = {1: ["mod", "stmt", "expr"],
-                2: self.sum_cats + ["product_types", "builtin"],
-                }
-        html = []
-        for col in [1, 2]:
-            html.append('<div class="col{}">'.format(col))
-            for group in cols[col]:
-                name, types = self.get_group(group)
-                html.append(('<div class="category %s"><span>%s</span><div>' %
-                       (name, name)))
-                for ntype in sorted(types):
-                    html.append(self.render_type(self.types[ntype]))
-                html.append('</div></div>')
-            html.append('</div>')
-        return '\n'.join(html)
-
-    def render_head(self):
-        intro = '<style type="text/css">'
-        outro = '</style>'
-        items = sorted(self.css.items())
-        colors = '\n'.join('.{}{}'.format(n,c) for n,c in items)
-        return "\n".join((intro, HTML_HEAD, colors, outro))
-
 
     def render(self):
-        html = ("<html>"
-                "  <head>{head}</head>"
-                "  <body>{body}</body>"
-                "</html>")
-        print(html.format(head=self.render_head(), body=self.render_body()))
-
-
-# HTML
-HTML_HEAD = """
-body{
-background-color:#b0c4de;
-}
-
-
-.mod {background-color: #8F5E46}
-.stmt {background-color: #9F8759}
-.expr {background-color: #96A1A9}
-
-.category{
-clear: both;
-}
-
-.type{
-border: 1px solid #666666;
-margin: 2px;
-float: left;
-padding: 3px;
-}
-
-.field{
-border:2px dashed black;
-padding: 2px;
-font-size:small;
-display: inline-block;
-}
-
-.col1{
-position: absolute;
-width: 48%;
-}
-
-.col2{
-position: absolute;
-width: 48%;
-left: 50%;
-}
-"""
-
+        template = self.jinja_env.get_template("asdl.html")
+        cols = {1: ["mod", "stmt", "expr"],
+                2: self.sum_cats + ["product_types", "builtin"]}
+        print(template.render(asdl=self, category_colors=self.css,
+                              columns=cols))
 
 
 

@@ -37,7 +37,7 @@ def task_asdl():
         yield {
             'name': name + '.html',
             'actions': [cmd_html.format(fn, target)],
-            'file_dep': ['pyreg/asdlview.py', fn],
+            'file_dep': ['pyreg/asdlview.py', 'pyreg/templates/asdl.html', fn],
             'targets': [target],
             }
 
@@ -45,7 +45,8 @@ def task_asdl():
         yield {
             'name': name + '.json',
             'actions': [cmd_json.format(fn, target)],
-            'file_dep': ['pyreg/asdlview.py', fn],
+            'file_dep': ['pyreg/asdlview.py', 'pyreg/templates/ast.html',
+                         'pyreg/templates/ast_node.html', fn],
             'targets': [target],
             }
 

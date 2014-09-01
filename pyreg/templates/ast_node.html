@@ -1,0 +1,26 @@
+{% macro node(node, class_info, category, attrs) %}
+     <div class="{{category}} node_tbl">
+       <table>
+         <th colspan="10">
+           <span class="node_type">{{node.class_}}</span>
+           <span class="att">({{', ' |join(attrs)}})</span>
+         </th>
+
+          {% if category == 'stmt' %}
+            {% for line_num in node.line_nums|sort %}
+               <tr class="code"><td colspan="10">
+                 <pre>{{line_num}}: {{node.lines[line_num - 1]}}</pre>
+               </td></tr>
+            {% endfor %}
+          {% endif %}
+       </table>
+       <table>
+         {% for field_name in class_info['order'] %}
+            <tr>
+              <td class="field_name">{{field_name}}</td>
+              <td>{{node.fields[field_name].to_html()}}</td>
+            </tr>
+         {% endfor %}
+       </table>
+     </div>
+{% endmacro %}

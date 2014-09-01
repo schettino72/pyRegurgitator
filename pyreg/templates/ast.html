@@ -1,0 +1,24 @@
+<html>
+  <head>
+    <style type="text/css">
+    * {font-size:small;}
+    .att{font-size:x-small;}
+    .node_tbl{border: 1px solid #66B;}
+    .node_tbl th{text-align:left;}
+    .node_tbl td{vertical-align:top;}
+    .stmt{border-top: 2px solid #ff8800;}
+    .mod{border: hidden;}
+    .field_list{border: 2px solid #eef;}
+    .field_name{background-color:#eef;}
+    .node_type{background-color:#99B;}
+    .final{background-color:#A88;}
+    .code{background-color:#ff8800;}
+    pre{font-size:13px;margin-bottom:0;}
+    </style>
+  </head>
+
+  <body>
+    <h4>{{filename}}</h4>
+    {{tree.to_html()}}
+  </body>
+</html>

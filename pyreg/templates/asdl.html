@@ -1,0 +1,71 @@
+<html>
+  <head>
+    <style type="text/css">
+      body{
+      background-color:#b0c4de;
+      }
+
+      .mod {background-color: #8F5E46}
+      .stmt {background-color: #9F8759}
+      .expr {background-color: #96A1A9}
+
+      .category{
+      clear: both;
+      }
+
+      .type{
+      border: 1px solid #666666;
+      margin: 2px;
+      float: left;
+      padding: 3px;
+      }
+
+      .field{
+      border:2px dashed black;
+      padding: 2px;
+      font-size:small;
+      display: inline-block;
+      }
+
+      .col1{
+      position: absolute;
+      width: 48%;
+      }
+
+      .col2{
+      position: absolute;
+      width: 48%;
+      left: 50%;
+      }
+
+      /* category colors */
+      {% for category, css in category_colors|dictsort(True) %}
+        .{{category}}{{css}}
+      {% endfor %}
+    </style>
+  </head>
+
+{% macro node_type(ntype) -%}
+    <div class="type {{ntype.cat_name}}">
+        <div>{{ntype.name}}</div>
+        {% for field in ntype.fields %}
+          <span title="{{field.cat_name}}" class="field {{field.cat_name}}">{{field.qualifier}}{{field.name}}</span>
+        {% endfor %}
+    </div>
+  {%- endmacro %}
+
+  <body>
+    {% for col in [1, 2] %}
+      <div class="col{{col}}">
+        {% for group in columns[col] %}
+          {% set name, types = asdl.get_group(group) %}
+          <div class="category {{name}}"><span>{{name}}</span><div>
+            {% for ntype in types|sort %}
+            {{node_type(asdl.types[ntype])}}
+            {% endfor %}
+          </div></div>
+        {% endfor %}
+      </div>
+    {% endfor %}
+  </body>
+</html>

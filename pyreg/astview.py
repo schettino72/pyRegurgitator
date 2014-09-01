@@ -5,6 +5,8 @@ import ast
 import json
 import argparse
 
+import jinja2
+
 from .ast_util import file2ast
 
 
@@ -85,6 +87,15 @@ class AstNode(object):
     @ivar fields: dict of AstField
     """
 
+    @staticmethod
+    def tree(filename):
+        """build whole AST from a module"""
+        ct = file2ast(filename)
+        with open(filename, 'r') as fp:
+            lines = fp.readlines()
+            return AstNode(ct, '', lines, None)
+
+
     def __init__(self, node, path, lines, parent):
         self.node = node
         self.path = path
@@ -114,22 +125,13 @@ class AstNode(object):
             else:
                 self.fields[name] = TypeField(value, f_path, lines)
 
-    def to_text(self):
-        """dumps node info in plain text
-        @returns string
-        """
-        attrs = ["%s=%s" % (k, v) for k,v in self.attrs]
-        fields = ["%s=%s" % (k, v.to_text()) for k,v in self.fields.items()]
-        return "%s(%s)" % (self.class_, ", ".join(attrs + fields))
-
 
     def to_html(self):
-        """dumps node in HTML
-        @returns string
+        """return HTML string for node
+          - set line_nums of node
         """
         class_info = MAP[self.class_]
         category = class_info['category']
-        attrs = ("%s" % v for k,v in self.attrs)
 
         # add line number of this node to the contatining statement
         if self.attrs:
@@ -158,28 +160,18 @@ class AstNode(object):
                 triple_quote_line -= 1
                 self.line_nums.add(triple_quote_line)
 
+        attrs = ["%s" % v for k,v in self.attrs]
+        return self.node_template.module.node(self, class_info, category, attrs)
 
-        # build HTML
-        n_head = ('<div class="%s node_tbl"><table><th colspan="10">' +
-                  '<span class="node_type">%s</span> ' +
-                  '<span class="att">(%s)</span></th>')
-        n_sourcecode = '<tr class="code"><td colspan="10"><pre>%s: %s</pre></td></tr>'
-        n_stmts_head = '</table><table>'
-        n_stmts = '<tr><td class="field_name">%s</td><td>%s</td></tr>'
-        n_close = '</table><div>'
 
-        fields_html = []
-        for field_name in class_info['order']:
-            field_html = self.fields[field_name].to_html()
-            fields_html.append(n_stmts % (field_name, field_html))
 
-        html = n_head % (category , self.class_, ", ".join(attrs))
-        if category == 'stmt':
-            for line_num in sorted(self.line_nums):
-                html += n_sourcecode % (line_num, self.lines[line_num - 1])
-        html += n_stmts_head + "\n".join(fields_html)
-        html += n_close
-        return html
+    def to_text(self):
+        """dumps node info in plain text
+        @returns string
+        """
+        attrs = ["%s=%s" % (k, v) for k,v in self.attrs]
+        fields = ["%s=%s" % (k, v.to_text()) for k,v in self.fields.items()]
+        return "%s(%s)" % (self.class_, ", ".join(attrs + fields))
 
     def to_map(self):
         items = []
@@ -193,62 +185,17 @@ class AstNode(object):
 
 
 
-def file2lines(file_name):
-    """get list of lines from file_name"""
-    fp = open(file_name, 'r')
-    lines = fp.readlines()
-    fp.close()
-    return lines
 
-
-def ast2txt(filename):
-    """dump file as plain text (same output as ast.dump)"""
-    ct = file2ast(filename)
-    lines = file2lines(filename)
-    tree = AstNode(ct, '', lines, None)
-
-    print((tree.to_text()))
-    #print "----------------"
-    #print ast.dump(ct, include_attributes=True)
-
-
-
-def ast2map(filename):
-    """display variable path to node"""
-    ct = file2ast(filename)
-    lines = file2lines(filename)
-    tree = AstNode(ct, '', lines, None)
-
-    # map
-    for x in tree.to_map():
-        print(x)
-
-
-def ast2html(filename):
+def ast2html(filename, tree):
     """pretty print ast in HTML"""
-    ct = file2ast(filename)
-    lines = file2lines(filename)
-    tree = AstNode(ct, '', lines, None)
+    jinja_env = jinja2.Environment(
+        loader=jinja2.PackageLoader('pyreg', 'templates'),
+        undefined=jinja2.StrictUndefined,
+        trim_blocks=True)
+    template = jinja_env.get_template("ast.html")
+    AstNode.node_template = jinja_env.get_template("ast_node.html")
+    print(template.render(filename=filename, tree=tree))
 
-    style = """
-* {font-size:small;}
-.att{font-size:x-small;}
-.node_tbl{border: 1px solid #66B;}
-.node_tbl th{text-align:left;}
-.node_tbl td{vertical-align:top;}
-.stmt{border-top: 2px solid #ff8800;}
-.mod{border: hidden;}
-.field_list{border: 2px solid #eef;}
-.field_name{background-color:#eef;}
-.node_type{background-color:#99B;}
-.final{background-color:#A88;}
-.code{background-color:#ff8800;}
-pre{font-size:13px;margin-bottom:0;}
-"""
-    print('<html><head><style type="text/css">%s</style></head>' % style)
-    print('<body><h4>%s</h4>' % filename)
-    print(tree.to_html())
-    print('</body></html>')
 
 
 def ast_view(args=None):
@@ -266,12 +213,14 @@ Super pretty-printer for python modules's AST(abstract syntax tree)."""
         help='python module')
 
     args = parser.parse_args(args)
+    tree = AstNode.tree(args.py_file[0])
     if args.format == 'html':
-        ast2html(args.py_file[0])
+        ast2html(args.py_file[0], tree)
     elif args.format == 'map':
-        ast2map(args.py_file[0])
-    elif args.format == 'html':
-        ast2map(args.py_file[0])
+        for x in tree.to_map():
+            print(x)
+    elif args.format == 'txt':
+        print((tree.to_text()))
 
 
 if __name__ == "__main__":
