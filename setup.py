@@ -27,6 +27,7 @@ setup(name = 'pyRegurgitator',
                      ],
 
       packages = ['pyreg', 'pyreg/project'],
+      package_data = {'': ['asdl/*']},
       install_requires = ['jinja2'],
       long_description = long_description,
       entry_points = {

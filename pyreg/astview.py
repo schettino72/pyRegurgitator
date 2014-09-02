@@ -1,10 +1,12 @@
 """super pretty print of python source-code's AST"""
 
 import platform
+import os
 import ast
 import json
 import argparse
 
+from pkg_resources import resource_filename
 import jinja2
 
 from .ast_util import file2ast
@@ -195,7 +197,8 @@ def ast2html(filename, tree):
 
     # load ASDL based on python version
     py_version = platform.python_version_tuple()
-    asdl_json_file = 'pyreg/asdl/python{}{}.asdl.json'.format(*py_version[:2])
+    json_name = 'python{}{}.asdl.json'.format(*py_version[:2])
+    asdl_json_file = resource_filename('pyreg', os.path.join('asdl', json_name))
     with open(asdl_json_file) as fp:
         AstNode.MAP = json.load(fp)
 
