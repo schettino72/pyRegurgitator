@@ -7,8 +7,6 @@ import ast
 
 import jinja2
 
-from .ast_util import file2ast
-
 
 
 def get_tracked_files_hg(path):
@@ -61,7 +59,8 @@ class File(object):
         """get module's ast node"""
         file_path = os.path.join(root_path, self.path)
         try:
-            self.ast = file2ast(file_path)
+            with open(file_path, 'r') as fp:
+                self.ast = ast.parse(fp.read(), file_path)
         except Exception as exception:
             print("pymap error creating AST for %s." % file_path)
             print(str(exception))

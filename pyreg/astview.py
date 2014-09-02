@@ -9,7 +9,6 @@ import argparse
 from pkg_resources import resource_filename
 import jinja2
 
-from .ast_util import file2ast
 
 
 class AstField(object):
@@ -88,10 +87,11 @@ class AstNode(object):
     @staticmethod
     def tree(filename):
         """build whole AST from a module"""
-        ct = file2ast(filename)
+        with open(filename, 'r') as fp:
+            ct = ast.parse(fp.read(), filename)
         with open(filename, 'r') as fp:
             lines = fp.readlines()
-            return AstNode(ct, '', lines, None)
+        return AstNode(ct, '', lines, None)
 
 
     def __init__(self, node, path, lines, parent):
