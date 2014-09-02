@@ -5,6 +5,7 @@ import os
 import ast
 import json
 import argparse
+from xml.sax.saxutils import escape
 
 from pkg_resources import resource_filename
 import jinja2
@@ -21,51 +22,73 @@ class AstField(object):
 
 class TypeField(AstField):
     def __init__(self, value, path, lines):
-        self._value = value
+        self.value = value
         self.path = path
+
     def to_text(self):
-        return repr(self._value)
-    def to_html(self):
-        if isinstance(self._value,str):
-            #TODO escape HTML from docstrings
-            str_value = repr(self._value.replace('\n', '\n<br/>'))
-        else:
-            str_value = repr(self._value)
-        return '<span class="final">%s</span>' % str_value
+        return repr(self.value)
+
     def to_map(self):
-        return ["%s => %s" % (self.path, repr(self._value))]
+        return ["%s => %s" % (self.path, repr(self.value))]
+
+    def to_html(self):
+        if isinstance(self.value, str):
+            #TODO escape HTML from docstrings
+            str_value = repr(self.value.replace('\n', '\n<br/>'))
+        else:
+            str_value = repr(self.value)
+        return '<span class="final">%s</span>' % str_value
+
+    def to_xml(self):
+        if isinstance(self.value, str):
+            return escape(self.value)
+        else:
+            return self.value
+
 
 class NodeField(AstField):
     def __init__(self, value, path, lines, parent):
-        self._value = AstNode(value, path, lines, parent)
+        self.value = AstNode(value, path, lines, parent)
         self.path = path
+
     def to_text(self):
-        return self._value.to_text()
-    def to_html(self):
-        return self._value.to_html()
+        return self.value.to_text()
+
     def to_map(self):
-        ll = ["%s (%s)" % (self.path, self._value.node.__class__.__name__)]
-        ll.extend(self._value.to_map())
+        ll = ["%s (%s)" % (self.path, self.value.node.__class__.__name__)]
+        ll.extend(self.value.to_map())
         return ll
+
+    def to_html(self):
+        return self.value.to_html()
+
+    def to_xml(self):
+        return self.value.to_xml()
+
 
 class ListField(AstField):
     def __init__(self, value, path, lines, parent):
-        self._value = [AstNode(n, "%s[%d]" % (path,i), lines, parent) for i,n in enumerate(value)]
+        self.value = [AstNode(n, "%s[%d]" % (path,i), lines, parent) for i,n in enumerate(value)]
         self.path = path
+
     def to_text(self):
-        return "[%s]" % ", ".join((n.to_text() for n in self._value))
-    def to_html(self):
-        t_head = '<table class="field_list">'
-        t_body = "".join(("<tr><td>%s</td></tr>" % n.to_html() for n in self._value))
-        t_foot = '</table>'
-        return t_head + t_body + t_foot
+        return "[%s]" % ", ".join((n.to_text() for n in self.value))
+
     def to_map(self):
         ll = ["%s []" % self.path]
-        for n in self._value:
+        for n in self.value:
             ll.append("%s (%s)" % (n.path, n.node.__class__.__name__))
             ll.extend(n.to_map())
         return ll
 
+    def to_html(self):
+        t_head = '<table class="field_list">'
+        t_body = "".join(("<tr><td>%s</td></tr>" % n.to_html() for n in self.value))
+        t_foot = '</table>'
+        return t_head + t_body + t_foot
+
+    def to_xml(self):
+        return ''.join(n.to_xml() for n in self.value)
 
 
 
@@ -93,6 +116,17 @@ class AstNode(object):
             lines = fp.readlines()
         return AstNode(ct, '', lines, None)
 
+    @classmethod
+    def load_map(cls):
+        """load type map/info from json file"""
+        # load ASDL based on python version
+        py_version = platform.python_version_tuple()
+        json_name = 'python{}{}.asdl.json'.format(*py_version[:2])
+        asdl_json_file = resource_filename('pyreg',
+                                           os.path.join('asdl', json_name))
+        with open(asdl_json_file) as fp:
+            cls.MAP = json.load(fp)
+
 
     def __init__(self, node, path, lines, parent):
         self.node = node
@@ -111,6 +145,7 @@ class AstNode(object):
             node._fields = []
         # end - python2.5
 
+        # set fields / create sub-nodes
         self.attrs = [(name, getattr(node, name)) for name in node._attributes]
         self.fields = {}
         for name in node._fields: # _fields is a tuple of str
@@ -177,6 +212,39 @@ class AstNode(object):
             items.extend(f.to_map())
         return items
 
+    def to_xml(self):
+        tmpl = "<{name}>{val}</{name}>"
+        class_info = self.MAP[self.class_]
+
+        # Leaf nodes
+        if self.class_ == 'Name':
+            name_id = self.fields['id'].value
+            ctx = self.fields['ctx'].value.class_
+            tmpl = '<Name name="{val}" ctx="{ctx}">{val}</Name>'
+            return tmpl.format(val=name_id, ctx=ctx)
+        if self.class_ == 'Num':
+            return tmpl.format(name='Num', val=self.fields['n'].value)
+        if self.class_ == 'Str':
+            tmpl = "<Str>{delimiter}{val}{delimiter}</Str>"
+            return tmpl.format(delimiter="'", val=self.fields['s'].value)
+
+        # Non-Leaf nodes
+        field_nodes = []
+        if self.class_ == 'Assign':
+            field_nodes = [
+                self.fields['targets'].to_xml(),
+                tmpl.format(name='token', val=' = '),
+                self.fields['value'].to_xml()]
+
+
+        else:
+            for field_name in class_info['order']:
+                xml_str = tmpl.format(name=field_name,
+                                      val=self.fields[field_name].to_xml())
+                field_nodes.append(xml_str)
+
+        val = ''.join(field_nodes)
+        return tmpl.format(name=self.class_, val=val)
 
 
 #####################################33
@@ -194,16 +262,16 @@ def ast2html(filename, tree):
 
     # inject some global variables into AstNode class
     AstNode.node_template = jinja_env.get_template("ast_node.html")
-
-    # load ASDL based on python version
-    py_version = platform.python_version_tuple()
-    json_name = 'python{}{}.asdl.json'.format(*py_version[:2])
-    asdl_json_file = resource_filename('pyreg', os.path.join('asdl', json_name))
-    with open(asdl_json_file) as fp:
-        AstNode.MAP = json.load(fp)
+    AstNode.load_map()
 
     # ready to generate the HTML
     print(template.render(filename=filename, tree=tree))
+
+
+def ast2xml(filename, tree):
+    """convert ast to srcML"""
+    AstNode.load_map()
+    print(tree.to_xml())
 
 
 
@@ -215,7 +283,7 @@ Super pretty-printer for python modules's AST(abstract syntax tree)."""
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
         '-f', '--format', dest='format', metavar='FORMAT',
-        choices=('html', 'map', 'txt'), default='html',
+        choices=('html', 'xml', 'map', 'txt'), default='html',
         help='output format one of [%(choices)s], default=%(default)s')
     parser.add_argument(
         'py_file', metavar='MODULE', nargs=1,
@@ -225,6 +293,8 @@ Super pretty-printer for python modules's AST(abstract syntax tree)."""
     tree = AstNode.tree(args.py_file[0])
     if args.format == 'html':
         ast2html(args.py_file[0], tree)
+    if args.format == 'xml':
+        ast2xml(args.py_file[0], tree)
     elif args.format == 'map':
         for x in tree.to_map():
             print(x)

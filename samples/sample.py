@@ -8,13 +8,14 @@ from time import time, ascitime
 mm = 5 + \
     9
 
-ss = """se "
+ss = """se " # middle of expression
 line2"""
 
+# comment top level
 a = 2
 b = 5
 t = a + b
-print(t)
+print(t) # comment after statement
 
 
 def xxxx(a,b,c=5):
@@ -31,4 +32,5 @@ def nothing():
     """multiple
     with identation"""
     time()
+    # comment at func level
     ascitime()

@@ -53,16 +53,47 @@ def task_asdl():
             }
 
 
+def xml_text(xml_file, target):
+    """return text content of a XML tree"""
+    import xml.etree.ElementTree as ET
+    root = ET.parse(xml_file)
+    reslist = list(root.iter())
+    with open(target, 'w') as fp:
+        for element in reslist:
+            if element.text:
+                fp.write(element.text)
+
+
 SAMPLES = glob.glob("samples/*.py")
 def task_ast():
     """generate HTML for AST of sample modules"""
     for sample in SAMPLES:
-        target = "_output/%s.html" % sample[8:-3]
-        yield {'name': sample,
-               'actions':["astview {} > {}".format(sample, target)],
-               'file_dep': ['pyreg/astview.py', sample],
-               'targets': [target]
-               }
+        html = "_output/%s.html" % sample[8:-3]
+        yield {
+            'basename': 'ast2html',
+            'name': sample,
+            'actions':["astview {} > {}".format(sample, html)],
+            'file_dep': ['pyreg/astview.py', sample],
+            'targets': [html]
+            }
+
+        xml = "_output/%s.xml" % sample[8:-3]
+        yield {
+            'basename': 'ast2xml',
+            'name': sample,
+            'actions':["astview --format=xml {} > {}".format(sample, xml)],
+            'file_dep': ['pyreg/astview.py', sample],
+            'targets': [xml]
+            }
+
+        gen_py = "_output/%s.py" % sample[8:-3]
+        yield {
+            'basename': 'xml2py',
+            'name': sample,
+            'actions':[(xml_text, (xml, gen_py))],
+            'file_dep': ['pyreg/astview.py', xml],
+            'targets': [gen_py]
+            }
 
 
 ############################
