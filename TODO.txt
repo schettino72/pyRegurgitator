@@ -9,6 +9,5 @@ astview
 0.2
 ==========
 
-- use jinja2
 - website
 

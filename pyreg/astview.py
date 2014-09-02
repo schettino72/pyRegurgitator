@@ -10,14 +10,6 @@ import jinja2
 from .ast_util import file2ast
 
 
-# load ASDL based on python version
-python_version = platform.python_version().split('.')
-# FIXME harcoded version
-# put json files inside package
-with open('_output/python33.asdl.json') as fp:
-    MAP = json.load(fp)
-
-
 class AstField(object):
     """There are 3 basic kinds of AST fields
      * TypeField - contains a basic type (not an AST node/element)
@@ -87,6 +79,10 @@ class AstNode(object):
     @ivar fields: dict of AstField
     """
 
+    # this values are injected by ast2html
+    node_template = None
+    MAP = None
+
     @staticmethod
     def tree(filename):
         """build whole AST from a module"""
@@ -130,14 +126,14 @@ class AstNode(object):
         """return HTML string for node
           - set line_nums of node
         """
-        class_info = MAP[self.class_]
+        class_info = self.MAP[self.class_]
         category = class_info['category']
 
         # add line number of this node to the contatining statement
         if self.attrs:
             curent = self
             while True:
-                if MAP[curent.class_]['category'] != "stmt":
+                if self.MAP[curent.class_]['category'] != "stmt":
                     if curent.parent:
                         curent = curent.parent
                         continue
@@ -193,7 +189,17 @@ def ast2html(filename, tree):
         undefined=jinja2.StrictUndefined,
         trim_blocks=True)
     template = jinja_env.get_template("ast.html")
+
+    # inject some global variables into AstNode class
     AstNode.node_template = jinja_env.get_template("ast_node.html")
+
+    # load ASDL based on python version
+    py_version = platform.python_version_tuple()
+    asdl_json_file = 'pyreg/asdl/python{}{}.asdl.json'.format(*py_version[:2])
+    with open(asdl_json_file) as fp:
+        AstNode.MAP = json.load(fp)
+
+    # ready to generate the HTML
     print(template.render(filename=filename, tree=tree))
 
 
