@@ -1,10 +1,13 @@
 
 import argparse
 from tokenize import tokenize
+import token as Token
 import xml.etree.ElementTree as ET
 
 
 from .astview import AstNode
+
+
 
 
 class AstNodeX(AstNode):
@@ -15,6 +18,13 @@ class AstNodeX(AstNode):
         ele = ET.Element(self.class_)
         ele.extend(fields)
         return ele
+
+    def _before_field(self, field_name):
+        """return text before a field in the node"""
+        field = self.fields[field_name]
+        self.tokens.find(field.line(), field.column())
+        return self.tokens.previous_text(self.tokens.pos)
+
 
     def to_xml(self):
         # apply converter based on node class_
@@ -32,27 +42,9 @@ class AstNodeX(AstNode):
             field_nodes.append(ele)
         return self.ff(field_nodes)
 
+
     def c_Expr(self):
         return self.ff([self.fields['value'].to_xml()])
-
-    def c_Assign(self):
-        targets = ET.Element('targets')
-        targets.extend(self.fields['targets'].to_xml())
-        equal = ET.Element('AssignOp')
-        equal.text= ' = '
-        return self.ff([
-                targets,
-                equal,
-                self.fields['value'].to_xml(),
-                ])
-
-
-    def c_Name(self):
-        ele = ET.Element('Name')
-        ele.set('name', self.fields['id'].value)
-        ele.set('ctx', self.fields['ctx'].value.class_)
-        ele.text = self.fields['id'].value
-        return ele
 
     def c_Num(self):
         ele = ET.Element('Num')
@@ -60,7 +52,7 @@ class AstNodeX(AstNode):
         return ele
 
     def c_Str(self):
-        tmpl = "<Str>{delimiter}{val}{delimiter}</Str>"
+        tmpl = "{delimiter}{val}{delimiter}"
         # FIXME why sometimes the col_offset is -1 with line to the end of
         # the string ? to indicate a docstring
         if self.attrs[1][1] == -1:
@@ -71,19 +63,39 @@ class AstNodeX(AstNode):
             # check for triple-quote
             if token.string[0] == token.string[1]:
                 delimiter *= 3
-        return tmpl.format(delimiter=delimiter, val=self.fields['s'].value)
-
-    def c_Add(self):
-        ele = ET.Element('Add')
-        ele.text = ' + '
+        ele = ET.Element('Str')
+        ele.text = tmpl.format(delimiter=delimiter, val=self.fields['s'].value)
         return ele
 
+    def c_Add(self):
+        return ET.Element('Add')
+
     def c_BinOp(self):
-        return self.ff([
-                self.fields['left'].to_xml(),
-                self.fields['op'].to_xml(),
+        op = self.fields['op'].to_xml()
+        op.text = self._before_field('right')
+        return self.ff([self.fields['left'].to_xml(),
+                op,
                 self.fields['right'].to_xml(),
                 ])
+
+    def c_Assign(self):
+        targets = ET.Element('targets')
+        targets.extend(self.fields['targets'].to_xml())
+        equal = ET.Element('delimiter')
+        equal.text = self._before_field('value')
+        return self.ff([
+                targets,
+                equal,
+                self.fields['value'].to_xml(),
+                ])
+
+    def c_Name(self):
+        ele = ET.Element('Name')
+        ele.set('name', self.fields['id'].value)
+        ele.set('ctx', self.fields['ctx'].value.class_)
+        ele.text = self.fields['id'].value
+        return ele
+
 
 
 class SrcToken:
@@ -101,6 +113,24 @@ class SrcToken:
             if token.start[0] == line and token.start[1] == col:
                 return token
             self.pos += 1
+
+    def previous_text(self, end_pos):
+        """get all text that preceeds a node.
+
+         - includes spance, operators and delimiters
+        """
+        text = ''
+        cur_col = self.tokens[end_pos].start[1]
+        while True:
+            end_pos -= 1
+            token = self.tokens[end_pos]
+            spaces = ' ' * (cur_col - token.end[1])
+            text = spaces + text
+            if token.type == Token.OP:
+                text = token.string + text
+            else:
+                return text
+            cur_col = token.start[1]
 
 
 def py2xml(filename):
@@ -122,7 +152,7 @@ def xml2py(xml):
 
 
 
-def main(args=None):
+def main(args=None): # pragma: no cover
     """command line program for py2xml"""
     description = """convert python module to XML representation"""
     parser = argparse.ArgumentParser(description=description)
@@ -133,5 +163,5 @@ def main(args=None):
     args = parser.parse_args(args)
     print(py2xml(args.py_file[0]))
 
-if __name__ == "__main__":
+if __name__ == "__main__": # pragma: no cover
     main()

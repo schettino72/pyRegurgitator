@@ -19,6 +19,13 @@ class AstField(object):
      * NodeField - contains a single AST element
      * ListField - contains a list of AST elements
     """
+    def line(self):
+        """return line of the first Node"""
+        raise NotImplementedError()
+    def column(self):
+        """return column offset of the first Node"""
+        raise NotImplementedError()
+
 
 class TypeField(AstField):
     def __init__(self, value, path, lines):
@@ -51,6 +58,11 @@ class NodeField(AstField):
         self.value = parent.__class__(value, path, lines, parent)
         self.path = path
 
+    def line(self):
+        return self.value.attrs[0][1]
+    def column(self):
+        return self.value.attrs[1][1]
+
     def to_text(self):
         return self.value.to_text()
 
@@ -73,6 +85,11 @@ class ListField(AstField):
             node = parent.__class__(n, "%s[%d]" % (path,i), lines, parent)
             self.value.append(node)
         self.path = path
+
+    def line(self):
+        return self.value[0].attrs[0][1]
+    def column(self):
+        return self.value[0].attrs[1][1]
 
     def to_text(self):
         return "[%s]" % ", ".join((n.to_text() for n in self.value))
