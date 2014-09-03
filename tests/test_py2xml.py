@@ -36,22 +36,28 @@ line 2""" '''
 
     def test_str_implicit_concat(self, s2xml):
         string = "'part 1' ' /part 2'"
-        assert s2xml(string) == "<Expr><Str><s>'part 1'</s><space> </space><s>' /part 2'</s></Str></Expr>"
+        assert s2xml(string) == "<Expr><Str><s>'part 1'</s> <s>' /part 2'</s></Str></Expr>"
 
     def test_str_implicit_concat_line_continuation(self, s2xml):
         string = r"""'part 1'  \
  ' /part 2'"""
-        assert s2xml(string) == "<Expr><Str><s>'part 1'</s><space>  \\\n</space><s>' /part 2'</s></Str></Expr>"
+        assert s2xml(string) == "<Expr><Str><s>'part 1'</s>  \\\n<s>' /part 2'</s></Str></Expr>"
 
     def test_tuple(self, s2xml):
-        assert s2xml('(1,2,3)') == '<Expr><Tuple ctx="Load"><delimiter>(</delimiter><Num>1</Num><delimiter>,</delimiter><Num>2</Num><delimiter>,</delimiter><Num>3</Num><delimiter>)</delimiter></Tuple></Expr>'
+        assert s2xml('(1,2,3)') == '<Expr><Tuple ctx="Load">(<Num>1</Num>,<Num>2</Num>,<Num>3</Num>)</Tuple></Expr>'
 
     def test_tuple_space(self, s2xml):
-        assert s2xml('(  1, 2,3 )') == '<Expr><Tuple ctx="Load"><delimiter>(  </delimiter><Num>1</Num><delimiter>, </delimiter><Num>2</Num><delimiter>,</delimiter><Num>3</Num><delimiter> )</delimiter></Tuple></Expr>'
+        assert s2xml('(  1, 2,3 )') == '<Expr><Tuple ctx="Load">(  <Num>1</Num>, <Num>2</Num>,<Num>3</Num> )</Tuple></Expr>'
 
 
 
 class TestExpressions:
+    def test_expr_in_parenthesis(self, s2xml):
+        assert s2xml('(3 )') == '<Expr>(<Num>3</Num> )</Expr>'
+
+    def test_expr_in_parenthesis_n(self, s2xml):
+        assert s2xml('((3 )  )') == '<Expr>((<Num>3</Num> )  )</Expr>'
+
     def test_binop_add(self, s2xml):
         assert s2xml('1 + 2') == \
             '<Expr><BinOp><Num>1</Num><Add> + </Add><Num>2</Num></BinOp></Expr>'
@@ -63,11 +69,11 @@ class TestExpressions:
 class TestStatements:
     def test_assign(self, s2xml):
         assert s2xml('d = 5') == \
-            '<Assign><targets><Name ctx="Store" name="d">d</Name></targets><delimiter> = </delimiter><Num>5</Num></Assign>'
+            '<Assign><targets><Name ctx="Store" name="d">d</Name></targets> = <Num>5</Num></Assign>'
 
     def test_assign_space(self, s2xml):
         assert s2xml('f  =   7') == \
-            '<Assign><targets><Name ctx="Store" name="f">f</Name></targets><delimiter>  =   </delimiter><Num>7</Num></Assign>'
+            '<Assign><targets><Name ctx="Store" name="f">f</Name></targets>  =   <Num>7</Num></Assign>'
 
 
 

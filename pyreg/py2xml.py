@@ -3,27 +3,30 @@ import argparse
 from tokenize import tokenize
 import token as Token
 import xml.etree.ElementTree as ET
-
+from xml.dom.minidom import getDOMImplementation
 
 from .astview import AstNode
 
-
+impl = getDOMImplementation()
+DOM = impl.createDocument(None, None, None)
+def Element(tag_name, childs=None, text=None):
+    ele = DOM.createElement(tag_name)
+    if childs:
+        for node in childs:
+            ele.appendChild(node)
+    if text:
+        ele.appendChild(DOM.createTextNode(text))
+    return ele
 
 
 class AstNodeX(AstNode):
     """add capability to AstNode be convert to XML"""
 
-    def ff(self, fields):
-        """return xml string from list of child nodes"""
-        ele = ET.Element(self.class_)
-        ele.extend(fields)
-        return ele
-
     def _before_field(self, field_name):
         """return text before a field in the node"""
         field = self.fields[field_name]
         self.tokens.find(field.line(), field.column())
-        return self.tokens.previous_text(self.tokens.pos)
+        return self.tokens.previous_text()
 
 
     def to_xml(self):
@@ -36,31 +39,45 @@ class AstNodeX(AstNode):
         class_info = self.MAP[self.class_]
         field_nodes = []
         for field_name in class_info['order']:
-            ele = ET.Element(field_name)
             field = self.fields[field_name]
-            ele.extend(field.to_xml())
+            ele = Element(field_name, childs=field.to_xml())
             field_nodes.append(ele)
-        return self.ff(field_nodes)
+        return Element(self.class_, childs=field_nodes)
 
 
     def c_Expr(self):
-        return self.ff([self.fields['value'].to_xml()])
-
-    def c_Num(self):
-        ele = ET.Element('Num')
-        ele.text = str(self.fields['n'].value)
+        # parenthesis handling applies to all `expr` fields
+        # not only to the `Expr` class
+        ele = Element(self.class_)
+        expr_value = self.fields['value'].value
+        have_parenthesis = False
+        # assume multiline string expressions wont be wrapped in ()
+        if expr_value.column != -1 and expr_value.class_ != 'Tuple':
+            token = self.tokens.find(self.line, self.column)
+            have_parenthesis = token.type == Token.OP
+        if have_parenthesis:
+            start_token = self.tokens.pos
+            while self.tokens.current().exact_type == Token.LPAR:
+                self.tokens.next()
+            ele.appendChild(DOM.createTextNode(self.tokens.previous_text()))
+        ele.appendChild(expr_value.to_xml())
+        if have_parenthesis:
+            self.tokens.find_close_par(start_token)
+            self.tokens.next()
+            ele.appendChild(DOM.createTextNode(self.tokens.previous_text()))
         return ele
 
+    def c_Num(self):
+        return Element('Num', text=str(self.fields['n'].value))
+
     def c_Str(self):
-        ele = ET.Element('Str')
+        ele = Element('Str')
         token = self.tokens.find_string(self.attrs[0][1], self.attrs[1][1])
         while True:
-            ele_s = ET.Element('s')
-            ele_s.text = token.string
-            ele.append(ele_s)
+            ele_s = Element('s', text=token.string)
+            ele.appendChild(ele_s)
             # check if next token is a string (implicit concatenation)
-            self.tokens.pos += 1
-            next_token = self.tokens.tokens[self.tokens.pos]
+            next_token = self.tokens.next()
             if next_token.type != Token.STRING:
                 break
 
@@ -69,98 +86,125 @@ class AstNodeX(AstNode):
             if token.end[0] != next_token.start[0]:
                 prev_space = token.line[token.end[1]:]
             # add space before next string concatenated
-            space = ET.Element('space')
-            space.text = prev_space + self.tokens.previous_text(self.tokens.pos)
-            ele.append(space)
+            space = DOM.createTextNode(
+                prev_space + self.tokens.previous_text())
+            ele.appendChild(space)
             token = next_token
         return ele
 
     def c_Tuple(self):
-        ele = ET.Element('Tuple', )
-        ele.set('ctx', self.fields['ctx'].value.class_)
+        ele = Element('Tuple')
+        ele.setAttribute('ctx', self.fields['ctx'].value.class_)
         for item in self.fields['elts'].value:
-            delimiter = ET.Element('delimiter')
             self.tokens.find(item.line, item.column)
-            delimiter.text = self.tokens.previous_text(self.tokens.pos)
-            ele.append(delimiter)
-            ele.append(item.to_xml())
-        r_paren = ET.Element('delimiter')
-        self.tokens.pos += 1
-        r_paren.text = self.tokens.previous_text(self.tokens.pos) + self.tokens.tokens[self.tokens.pos].string
-        ele.append(r_paren)
+            text = self.tokens.previous_text()
+            delimiter = DOM.createTextNode(text)
+            ele.appendChild(delimiter)
+            ele.appendChild(item.to_xml())
+        next_token = self.tokens.next()
+        text = (self.tokens.previous_text() +
+                next_token.string)
+        ele.appendChild(DOM.createTextNode(text))
         return ele
 
     def c_Add(self):
-        return ET.Element('Add')
+        return Element('Add')
 
     def c_BinOp(self):
         op = self.fields['op'].to_xml()
-        op.text = self._before_field('right')
-        return self.ff([self.fields['left'].to_xml(),
+        op.appendChild(DOM.createTextNode(self._before_field('right')))
+        return Element(self.class_, childs =[
+                self.fields['left'].to_xml(),
                 op,
                 self.fields['right'].to_xml(),
                 ])
 
     def c_Assign(self):
-        targets = ET.Element('targets')
-        targets.extend(self.fields['targets'].to_xml())
-        equal = ET.Element('delimiter')
-        equal.text = self._before_field('value')
-        return self.ff([
+        targets = Element('targets', childs=self.fields['targets'].to_xml())
+        equal = self._before_field('value')
+        return Element(self.class_, childs= [
                 targets,
-                equal,
+                DOM.createTextNode(equal),
                 self.fields['value'].to_xml(),
                 ])
 
     def c_Name(self):
-        ele = ET.Element('Name')
-        ele.set('name', self.fields['id'].value)
-        ele.set('ctx', self.fields['ctx'].value.class_)
-        ele.text = self.fields['id'].value
+        ele = Element('Name', text=self.fields['id'].value)
+        ele.setAttribute('name', self.fields['id'].value)
+        ele.setAttribute('ctx', self.fields['ctx'].value.class_)
         return ele
 
 
 
 class SrcToken:
-    """helper to read tokenized python source"""
+    """helper to read tokenized python source
+
+    Token is named tuple with field names:
+    type string start end line exact_type
+    """
     def __init__(self, fp):
         self.pos = 0 # current position of analised tokens
-        self.tokens = list(tokenize(fp.readline))
+        self.list = list(tokenize(fp.readline))
 
-    # token is named tuple with field names:
-    # type string start end line exact_type
+    def current(self):
+        return self.list[self.pos]
+
+    def next(self):
+        """return token given by self.pos"""
+        self.pos += 1
+        return self.list[self.pos]
+
     def find(self, line, col):
+        """find token given line and column"""
         while True:
-            token = self.tokens[self.pos]
+            token = self.list[self.pos]
             #print(self.pos, line, col, token.start)
             if token.start[0] == line and token.start[1] == col:
                 return token
             self.pos += 1
 
     def find_string(self, line, col):
-        """find token with given position
+        """find string token with given position
 
         multiline strings return last line and column == -1
         """
         if col == -1:
             while True:
-                token = self.tokens[self.pos]
+                token = self.list[self.pos]
                 if token.end[0] == line:
                     return token
                 self.pos += 1
         else:
             return self.find(line, col)
 
-    def previous_text(self, end_pos):
+
+    def find_close_par(self, start_pos):
+        """token with closing parenthesis from current position"""
+        self.pos = start_pos
+        num_open = 0
+        while True:
+            token = self.list[self.pos]
+            if token.type == Token.OP:
+                if token.exact_type == Token.RPAR:
+                    num_open -= 1
+                elif token.exact_type == Token.LPAR:
+                    num_open += 1
+            if num_open == 0:
+                return token
+            self.pos += 1
+
+
+    def previous_text(self, end_pos=None):
         """get all text that preceeds a node.
 
          - includes spance, operators and delimiters
         """
+        end_pos = end_pos if end_pos is not None else self.pos
         text = ''
-        cur_col = self.tokens[end_pos].start[1]
+        cur_col = self.list[end_pos].start[1]
         while True:
             end_pos -= 1
-            token = self.tokens[end_pos]
+            token = self.list[end_pos]
             spaces = ' ' * (cur_col - token.end[1])
             text = spaces + text
             if token.type == Token.OP:
@@ -173,10 +217,12 @@ class SrcToken:
 def py2xml(filename):
     """convert ast to srcML"""
     AstNodeX.load_map()
-    tree = AstNodeX.tree(filename)
+    ast_root = AstNodeX.tree(filename)
     with open(filename, 'rb') as fp:
         AstNodeX.tokens = SrcToken(fp)
-    return ET.tostring(tree.to_xml(), encoding='unicode')
+    root = ast_root.to_xml()
+    return root.toxml()
+    #return ET.tostring(ast_root.to_xml(), encoding='unicode')
 
 
 def xml2py(xml):
