@@ -52,19 +52,27 @@ class AstNodeX(AstNode):
         return ele
 
     def c_Str(self):
-        tmpl = "{delimiter}{val}{delimiter}"
-        # FIXME why sometimes the col_offset is -1 with line to the end of
-        # the string ? to indicate a docstring
-        if self.attrs[1][1] == -1:
-            delimiter = "'''"
-        else:
-            token = self.tokens.find(self.attrs[0][1], self.attrs[1][1])
-            delimiter = token.string[0]
-            # check for triple-quote
-            if token.string[0] == token.string[1]:
-                delimiter *= 3
         ele = ET.Element('Str')
-        ele.text = tmpl.format(delimiter=delimiter, val=self.fields['s'].value)
+        token = self.tokens.find_string(self.attrs[0][1], self.attrs[1][1])
+        while True:
+            ele_s = ET.Element('s')
+            ele_s.text = token.string
+            ele.append(ele_s)
+            # check if next token is a string (implicit concatenation)
+            self.tokens.pos += 1
+            next_token = self.tokens.tokens[self.tokens.pos]
+            if next_token.type != Token.STRING:
+                break
+
+            # check next string is on a different line
+            prev_space = ''
+            if token.end[0] != next_token.start[0]:
+                prev_space = token.line[token.end[1]:]
+            # add space before next string concatenated
+            space = ET.Element('space')
+            space.text = prev_space + self.tokens.previous_text(self.tokens.pos)
+            ele.append(space)
+            token = next_token
         return ele
 
     def c_Add(self):
@@ -113,6 +121,20 @@ class SrcToken:
             if token.start[0] == line and token.start[1] == col:
                 return token
             self.pos += 1
+
+    def find_string(self, line, col):
+        """find token with given position
+
+        multiline strings return last line and column == -1
+        """
+        if col == -1:
+            while True:
+                token = self.tokens[self.pos]
+                if token.end[0] == line:
+                    return token
+                self.pos += 1
+        else:
+            return self.find(line, col)
 
     def previous_text(self, end_pos):
         """get all text that preceeds a node.

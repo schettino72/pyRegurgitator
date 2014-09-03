@@ -26,8 +26,22 @@ class TestXml:
         assert s2xml('6') == '<Expr><Num>6</Num></Expr>'
 
     def test_str(self, s2xml):
-        assert s2xml('"my string"') == '<Expr><Str>"my string"</Str></Expr>'
-        assert s2xml("'''my 2'''") == "<Expr><Str>'''my 2'''</Str></Expr>"
+        assert s2xml('"my string"') == '<Expr><Str><s>"my string"</s></Str></Expr>'
+        assert s2xml("'''my 2'''") == "<Expr><Str><s>'''my 2'''</s></Str></Expr>"
+
+    def test_str_multiline(self, s2xml):
+        string = '''"""line 1
+line 2""" '''
+        assert s2xml(string) == '<Expr><Str><s>"""line 1\nline 2"""</s></Str></Expr>'
+
+    def test_str_implicit_concat(self, s2xml):
+        string = "'part 1' ' /part 2'"
+        assert s2xml(string) == "<Expr><Str><s>'part 1'</s><space> </space><s>' /part 2'</s></Str></Expr>"
+
+    def test_str_implicit_concat_line_continuation(self, s2xml):
+        string = r"""'part 1'  \
+ ' /part 2'"""
+        assert s2xml(string) == "<Expr><Str><s>'part 1'</s><space>  \\\n</space><s>' /part 2'</s></Str></Expr>"
 
     def test_binop_add(self, s2xml):
         assert s2xml('1 + 2') == \
@@ -44,6 +58,9 @@ class TestXml:
     def test_assign_space(self, s2xml):
         assert s2xml('f  =   7') == \
             '<Assign><targets><Name ctx="Store" name="f">f</Name></targets><delimiter>  =   </delimiter><Num>7</Num></Assign>'
+
+
+
 
 
 def test_xml2py():
