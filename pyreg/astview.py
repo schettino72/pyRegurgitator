@@ -12,13 +12,13 @@ import jinja2
 
 
 
+
 class AstField(object):
     """There are 3 basic kinds of AST fields
      * TypeField - contains a basic type (not an AST node/element)
      * NodeField - contains a single AST element
      * ListField - contains a list of AST elements
     """
-    pass
 
 class TypeField(AstField):
     def __init__(self, value, path, lines):
@@ -48,7 +48,7 @@ class TypeField(AstField):
 
 class NodeField(AstField):
     def __init__(self, value, path, lines, parent):
-        self.value = AstNode(value, path, lines, parent)
+        self.value = parent.__class__(value, path, lines, parent)
         self.path = path
 
     def to_text(self):
@@ -68,7 +68,10 @@ class NodeField(AstField):
 
 class ListField(AstField):
     def __init__(self, value, path, lines, parent):
-        self.value = [AstNode(n, "%s[%d]" % (path,i), lines, parent) for i,n in enumerate(value)]
+        self.value = []
+        for i,n in enumerate(value):
+            node = parent.__class__(n, "%s[%d]" % (path,i), lines, parent)
+            self.value.append(node)
         self.path = path
 
     def to_text(self):
@@ -88,7 +91,7 @@ class ListField(AstField):
         return t_head + t_body + t_foot
 
     def to_xml(self):
-        return ''.join(n.to_xml() for n in self.value)
+        return [n.to_xml() for n in self.value]
 
 
 
@@ -107,14 +110,14 @@ class AstNode(object):
     node_template = None
     MAP = None
 
-    @staticmethod
-    def tree(filename):
+    @classmethod
+    def tree(cls, filename):
         """build whole AST from a module"""
         with open(filename, 'r') as fp:
             ct = ast.parse(fp.read(), filename)
         with open(filename, 'r') as fp:
             lines = fp.readlines()
-        return AstNode(ct, '', lines, None)
+        return cls(ct, '', lines, None)
 
     @classmethod
     def load_map(cls):
@@ -197,7 +200,6 @@ class AstNode(object):
         return self.node_template.module.node(self, class_info, category, attrs)
 
 
-
     def to_text(self):
         """dumps node info in plain text
         @returns string
@@ -211,44 +213,6 @@ class AstNode(object):
         for f in self.fields.values():
             items.extend(f.to_map())
         return items
-
-    def to_xml(self):
-        tmpl = "<{name}>{val}</{name}>"
-        class_info = self.MAP[self.class_]
-
-        # Leaf nodes
-        if self.class_ == 'Name':
-            name_id = self.fields['id'].value
-            ctx = self.fields['ctx'].value.class_
-            tmpl = '<Name name="{val}" ctx="{ctx}">{val}</Name>'
-            return tmpl.format(val=name_id, ctx=ctx)
-        if self.class_ == 'Num':
-            return tmpl.format(name='Num', val=self.fields['n'].value)
-        if self.class_ == 'Str':
-            tmpl = "<Str>{delimiter}{val}{delimiter}</Str>"
-            return tmpl.format(delimiter="'", val=self.fields['s'].value)
-
-        # Non-Leaf nodes
-        field_nodes = []
-        if self.class_ == 'Assign':
-            field_nodes = [
-                self.fields['targets'].to_xml(),
-                tmpl.format(name='token', val=' = '),
-                self.fields['value'].to_xml()]
-
-
-        else:
-            for field_name in class_info['order']:
-                xml_str = tmpl.format(name=field_name,
-                                      val=self.fields[field_name].to_xml())
-                field_nodes.append(xml_str)
-
-        val = ''.join(field_nodes)
-        return tmpl.format(name=self.class_, val=val)
-
-
-#####################################33
-
 
 
 
@@ -268,11 +232,6 @@ def ast2html(filename, tree):
     print(template.render(filename=filename, tree=tree))
 
 
-def ast2xml(filename, tree):
-    """convert ast to srcML"""
-    AstNode.load_map()
-    print(tree.to_xml())
-
 
 
 def ast_view(args=None):
@@ -283,7 +242,7 @@ Super pretty-printer for python modules's AST(abstract syntax tree)."""
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument(
         '-f', '--format', dest='format', metavar='FORMAT',
-        choices=('html', 'xml', 'map', 'txt'), default='html',
+        choices=('html', 'map', 'txt'), default='html',
         help='output format one of [%(choices)s], default=%(default)s')
     parser.add_argument(
         'py_file', metavar='MODULE', nargs=1,
@@ -293,8 +252,6 @@ Super pretty-printer for python modules's AST(abstract syntax tree)."""
     tree = AstNode.tree(args.py_file[0])
     if args.format == 'html':
         ast2html(args.py_file[0], tree)
-    if args.format == 'xml':
-        ast2xml(args.py_file[0], tree)
     elif args.format == 'map':
         for x in tree.to_map():
             print(x)

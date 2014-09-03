@@ -2,7 +2,12 @@ import os
 import glob
 
 from doitpy.pyflakes import Pyflakes
+from doitpy.coverage import Coverage, PythonPackage
 from doitpy import pypi
+
+from pyreg.py2xml import xml2py
+
+
 
 DOIT_CONFIG = {'default_tasks': ['pyflakes', 'doctest']}
 
@@ -11,6 +16,14 @@ def task_pyflakes():
     yield Pyflakes().tasks('*.py')
     yield Pyflakes().tasks('pyreg/**/*.py')
 
+
+
+def task_coverage():
+    """show coverage for all modules including tests"""
+    cov = Coverage([PythonPackage('pyreg', 'tests')])
+    yield cov.all()
+    yield cov.src()
+    yield cov.by_module()
 
 def task_test():
     """run tests"""
@@ -55,17 +68,12 @@ def task_asdl():
 
 def xml_text(xml_file, target):
     """return text content of a XML tree"""
-    import xml.etree.ElementTree as ET
-    root = ET.parse(xml_file)
-    reslist = list(root.iter())
-    with open(target, 'w') as fp:
-        for element in reslist:
-            if element.text:
-                fp.write(element.text)
+    with open(xml_file) as fp_in, open(target, 'w') as fp_out:
+        fp_out.write(xml2py(fp_in.read()))
 
 
 SAMPLES = glob.glob("samples/*.py")
-def task_ast():
+def task_regurgitate():
     """generate HTML for AST of sample modules"""
     for sample in SAMPLES:
         html = "_output/%s.html" % sample[8:-3]
@@ -79,9 +87,9 @@ def task_ast():
 
         xml = "_output/%s.xml" % sample[8:-3]
         yield {
-            'basename': 'ast2xml',
+            'basename': 'py2xml',
             'name': sample,
-            'actions':["astview --format=xml {} > {}".format(sample, xml)],
+            'actions':["py2xml {} > {}".format(sample, xml)],
             'file_dep': ['pyreg/astview.py', sample],
             'targets': [xml]
             }

@@ -1,2 +1,3 @@
-abc = "first assignment"
-d2 = 5
+abc  = '''first assignment'''
+# comment line  
+d2=5 # comment end

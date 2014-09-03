@@ -34,6 +34,7 @@ setup(name = 'pyRegurgitator',
         'console_scripts': [
             'asdlview = pyreg.asdlview:asdl_view',
             'astview = pyreg.astview:ast_view',
+            'py2xml = pyreg.py2xml:main',
             ]
         },
       )
