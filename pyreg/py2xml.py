@@ -75,6 +75,21 @@ class AstNodeX(AstNode):
             token = next_token
         return ele
 
+    def c_Tuple(self):
+        ele = ET.Element('Tuple', )
+        ele.set('ctx', self.fields['ctx'].value.class_)
+        for item in self.fields['elts'].value:
+            delimiter = ET.Element('delimiter')
+            self.tokens.find(item.line, item.column)
+            delimiter.text = self.tokens.previous_text(self.tokens.pos)
+            ele.append(delimiter)
+            ele.append(item.to_xml())
+        r_paren = ET.Element('delimiter')
+        self.tokens.pos += 1
+        r_paren.text = self.tokens.previous_text(self.tokens.pos) + self.tokens.tokens[self.tokens.pos].string
+        ele.append(r_paren)
+        return ele
+
     def c_Add(self):
         return ET.Element('Add')
 

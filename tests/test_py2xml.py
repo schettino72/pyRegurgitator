@@ -21,7 +21,7 @@ def s2xml(tmpdir):
     return py_str2xml
 
 
-class TestXml:
+class TestSimpleExpressions:
     def test_num(self, s2xml):
         assert s2xml('6') == '<Expr><Num>6</Num></Expr>'
 
@@ -43,6 +43,15 @@ line 2""" '''
  ' /part 2'"""
         assert s2xml(string) == "<Expr><Str><s>'part 1'</s><space>  \\\n</space><s>' /part 2'</s></Str></Expr>"
 
+    def test_tuple(self, s2xml):
+        assert s2xml('(1,2,3)') == '<Expr><Tuple ctx="Load"><delimiter>(</delimiter><Num>1</Num><delimiter>,</delimiter><Num>2</Num><delimiter>,</delimiter><Num>3</Num><delimiter>)</delimiter></Tuple></Expr>'
+
+    def test_tuple_space(self, s2xml):
+        assert s2xml('(  1, 2,3 )') == '<Expr><Tuple ctx="Load"><delimiter>(  </delimiter><Num>1</Num><delimiter>, </delimiter><Num>2</Num><delimiter>,</delimiter><Num>3</Num><delimiter> )</delimiter></Tuple></Expr>'
+
+
+
+class TestExpressions:
     def test_binop_add(self, s2xml):
         assert s2xml('1 + 2') == \
             '<Expr><BinOp><Num>1</Num><Add> + </Add><Num>2</Num></BinOp></Expr>'
@@ -51,6 +60,7 @@ line 2""" '''
         assert s2xml('3+  4') == \
             '<Expr><BinOp><Num>3</Num><Add>+  </Add><Num>4</Num></BinOp></Expr>'
 
+class TestStatements:
     def test_assign(self, s2xml):
         assert s2xml('d = 5') == \
             '<Assign><targets><Name ctx="Store" name="d">d</Name></targets><delimiter> = </delimiter><Num>5</Num></Assign>'

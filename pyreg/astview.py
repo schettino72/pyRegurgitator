@@ -119,7 +119,7 @@ class AstNode(object):
     @ivar path: python variable's "path" to this node
     @ivar lines: node location on file
     @ivar class_: AST type
-    @ivar attrs
+    @ivar attrs: list of tuple (name, value) of all attributes
     @ivar fields: dict of AstField
     """
 
@@ -167,6 +167,9 @@ class AstNode(object):
 
         # set fields / create sub-nodes
         self.attrs = [(name, getattr(node, name)) for name in node._attributes]
+        if self.attrs:
+            self.line = self.attrs[0][1]
+            self.column = self.attrs[1][1]
         self.fields = {}
         for name in node._fields: # _fields is a tuple of str
             value = getattr(node, name)
@@ -213,7 +216,7 @@ class AstNode(object):
                 triple_quote_line -= 1
                 self.line_nums.add(triple_quote_line)
 
-        attrs = ["%s" % v for k,v in self.attrs]
+        attrs = [v for k,v in self.attrs]
         return self.node_template.module.node(self, class_info, category, attrs)
 
 

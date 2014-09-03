@@ -90,7 +90,7 @@ def task_regurgitate():
             'basename': 'py2xml',
             'name': sample,
             'actions':["py2xml {} > {}".format(sample, xml)],
-            'file_dep': ['pyreg/astview.py', sample],
+            'file_dep': ['pyreg/py2xml.py', sample],
             'targets': [xml]
             }
 
@@ -99,7 +99,7 @@ def task_regurgitate():
             'basename': 'xml2py',
             'name': sample,
             'actions':[(xml_text, (xml, gen_py))],
-            'file_dep': ['pyreg/astview.py', xml],
+            'file_dep': ['pyreg/py2xml.py', xml],
             'targets': [gen_py]
             }
 
