@@ -58,6 +58,9 @@ class TestExpressions:
     def test_expr_in_parenthesis_n(self, s2xml):
         assert s2xml('((3 )  )') == '<Expr>((<Num>3</Num> )  )</Expr>'
 
+    def test_expr_in_parenthesis_any(self, s2xml):
+        assert s2xml('( 2+ (3 )  )') == '<Expr>( <BinOp><Num>2</Num><Add>+ </Add>(<Num>3</Num> )</BinOp>  )</Expr>'
+
     def test_binop_add(self, s2xml):
         assert s2xml('1 + 2') == \
             '<Expr><BinOp><Num>1</Num><Add> + </Add><Num>2</Num></BinOp></Expr>'

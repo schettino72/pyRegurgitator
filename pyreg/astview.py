@@ -127,6 +127,8 @@ class AstNode(object):
     node_template = None
     MAP = None
 
+    
+
     @classmethod
     def tree(cls, filename):
         """build whole AST from a module"""
@@ -181,6 +183,9 @@ class AstNode(object):
             else:
                 self.fields[name] = TypeField(value, f_path, lines)
 
+    def __repr__(self):
+        return '{}(path={}, node={})'.format(
+            self.__class__.__name__, self.path, self.node)
 
     def to_html(self):
         """return HTML string for node

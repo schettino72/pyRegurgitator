@@ -4,8 +4,13 @@ from tokenize import tokenize
 import token as Token
 import xml.etree.ElementTree as ET
 from xml.dom.minidom import getDOMImplementation
+import logging as log
 
 from .astview import AstNode
+
+
+#log.basicConfig(level=log.DEBUG)
+
 
 impl = getDOMImplementation()
 DOM = impl.createDocument(None, None, None)
@@ -45,27 +50,60 @@ class AstNodeX(AstNode):
         return Element(self.class_, childs=field_nodes)
 
 
-    def c_Expr(self):
-        # parenthesis handling applies to all `expr` fields
-        # not only to the `Expr` class
-        ele = Element(self.class_)
-        expr_value = self.fields['value'].value
+    ###########################################################
+    # Expr
+    ###########################################################
+
+    def maybe_par_expr(self, parent, ast_node):
+        """deal with optional "()" around an expression"""
         have_parenthesis = False
+
+        # Figure out if expression has parenthis or not.
         # assume multiline string expressions wont be wrapped in ()
-        if expr_value.column != -1 and expr_value.class_ != 'Tuple':
+        if ast_node.column != -1 and ast_node.class_ != 'Tuple':
             token = self.tokens.find(self.line, self.column)
-            have_parenthesis = token.type == Token.OP
+            if token.exact_type == Token.LPAR:
+                have_parenthesis = True
+            else:
+                # if an expr has extra parameters sometimes the start
+                # column does not include the parenthesis, so here
+                # we also check the previous token
+                token = self.tokens.previous()
+                if token.exact_type == Token.LPAR:
+                    have_parenthesis = True
+
+        # add left parenthesis.
         if have_parenthesis:
             start_token = self.tokens.pos
+            par_count = 0
             while self.tokens.current().exact_type == Token.LPAR:
+                par_count += 1
                 self.tokens.next()
-            ele.appendChild(DOM.createTextNode(self.tokens.previous_text()))
-        ele.appendChild(expr_value.to_xml())
+            text = self.tokens.previous_text(start_exact_type=Token.LPAR)
+            parent.appendChild(DOM.createTextNode(text))
+
+        # add the expr node itself
+        parent.appendChild(ast_node.to_xml())
+
+        # add the right parenthesis
         if have_parenthesis:
             self.tokens.find_close_par(start_token)
             self.tokens.next()
-            ele.appendChild(DOM.createTextNode(self.tokens.previous_text()))
+            text = self.tokens.previous_text(
+                max_start=par_count,
+                end_exact_type=Token.RPAR, end_space=False)
+            print(repr(text))
+            parent.appendChild(DOM.createTextNode(text))
+
+
+    def c_Expr(self):
+        ele = Element('Expr')
+        self.maybe_par_expr(ele, self.fields['value'].value)
         return ele
+
+    ###########################################################
+    # expr
+    ###########################################################
 
     def c_Num(self):
         return Element('Num', text=str(self.fields['n'].value))
@@ -79,9 +117,10 @@ class AstNodeX(AstNode):
             # check if next token is a string (implicit concatenation)
             next_token = self.tokens.next()
             if next_token.type != Token.STRING:
+                self.tokens.pos -= 1
                 break
 
-            # check next string is on a different line
+            # check if next string is on a different line
             prev_space = ''
             if token.end[0] != next_token.start[0]:
                 prev_space = token.line[token.end[1]:]
@@ -91,6 +130,7 @@ class AstNodeX(AstNode):
             ele.appendChild(space)
             token = next_token
         return ele
+
 
     def c_Tuple(self):
         ele = Element('Tuple')
@@ -107,17 +147,30 @@ class AstNodeX(AstNode):
         ele.appendChild(DOM.createTextNode(text))
         return ele
 
-    def c_Add(self):
-        return Element('Add')
+
+    def c_Name(self):
+        ele = Element('Name', text=self.fields['id'].value)
+        ele.setAttribute('name', self.fields['id'].value)
+        ele.setAttribute('ctx', self.fields['ctx'].value.class_)
+        return ele
+
 
     def c_BinOp(self):
-        op = self.fields['op'].to_xml()
-        op.appendChild(DOM.createTextNode(self._before_field('right')))
-        return Element(self.class_, childs =[
-                self.fields['left'].to_xml(),
-                op,
-                self.fields['right'].to_xml(),
-                ])
+        op = self.fields['op'].value
+        orig_pos = self.tokens.pos
+        self.tokens.find(self.fields['right'].value.line,
+                         self.fields['right'].value.column)
+        op_text = self.tokens.previous_text(end_exact_type=Token.PLUS)
+        self.tokens.pos = orig_pos
+        ele = Element(self.class_)
+        ele.appendChild(self.fields['left'].value.to_xml())
+        ele.appendChild(Element(op.class_, text=op_text))
+        self.fields['right'].value.maybe_par_expr(ele, self.fields['right'].value)
+        return ele
+
+    ###########################################################
+    # stmt
+    ###########################################################
 
     def c_Assign(self):
         targets = Element('targets', childs=self.fields['targets'].to_xml())
@@ -127,12 +180,6 @@ class AstNodeX(AstNode):
                 DOM.createTextNode(equal),
                 self.fields['value'].to_xml(),
                 ])
-
-    def c_Name(self):
-        ele = Element('Name', text=self.fields['id'].value)
-        ele.setAttribute('name', self.fields['id'].value)
-        ele.setAttribute('ctx', self.fields['ctx'].value.class_)
-        return ele
 
 
 
@@ -152,16 +199,26 @@ class SrcToken:
     def next(self):
         """return token given by self.pos"""
         self.pos += 1
+        #log.debug('NEXT %s %s', self.pos, self.list[self.pos])
         return self.list[self.pos]
+
+    def previous(self):
+        """return token given by self.pos"""
+        self.pos -= 1
+        return self.list[self.pos]
+
+    def token_iter(self):
+        yield self.current()
+        while True:
+            yield self.next()
 
     def find(self, line, col):
         """find token given line and column"""
-        while True:
-            token = self.list[self.pos]
-            #print(self.pos, line, col, token.start)
+        log.debug('find %s %s', line, col)
+        for token in self.token_iter():
             if token.start[0] == line and token.start[1] == col:
+                log.debug('FOUND %s', token)
                 return token
-            self.pos += 1
 
     def find_string(self, line, col):
         """find string token with given position
@@ -169,11 +226,9 @@ class SrcToken:
         multiline strings return last line and column == -1
         """
         if col == -1:
-            while True:
-                token = self.list[self.pos]
+            for token in self.token_iter():
                 if token.end[0] == line:
                     return token
-                self.pos += 1
         else:
             return self.find(line, col)
 
@@ -182,8 +237,7 @@ class SrcToken:
         """token with closing parenthesis from current position"""
         self.pos = start_pos
         num_open = 0
-        while True:
-            token = self.list[self.pos]
+        for token in self.token_iter():
             if token.type == Token.OP:
                 if token.exact_type == Token.RPAR:
                     num_open -= 1
@@ -191,27 +245,56 @@ class SrcToken:
                     num_open += 1
             if num_open == 0:
                 return token
-            self.pos += 1
 
 
-    def previous_text(self, end_pos=None):
+    def previous_text(self, end_pos=None,
+                      start_exact_type=None, max_start=None,
+                      end_exact_type=None, end_space=True):
         """get all text that preceeds a node.
 
          - includes spance, operators and delimiters
+         - if `end_exact_type` is used go back and don't get
+           text until one token after end_exact_type.
+           This is used to handle extra "()" around AST expr nodes.
         """
         end_pos = end_pos if end_pos is not None else self.pos
         text = ''
-        cur_col = self.list[end_pos].start[1]
+        # Control if we are looking for starting end_pos,
+        # once it is found, stop checking end_exact_type
+        searching_end = end_exact_type is not None
+        matched_start = 0
         while True:
+            cur_col = self.list[end_pos].start[1]
             end_pos -= 1
             token = self.list[end_pos]
+            if searching_end:
+                if token.exact_type != end_exact_type:
+                    continue
+                else:
+                    searching_end = False
+                    self.pos = end_pos
+                    if not end_space:
+                        cur_col = token.end[1]
             spaces = ' ' * (cur_col - token.end[1])
-            text = spaces + text
-            if token.type == Token.OP:
-                text = token.string + text
+
+            match = False
+            if max_start and matched_start >= max_start:
+                pass
+            elif start_exact_type:
+                if token.exact_type == start_exact_type:
+                    match = True
+                else:
+                    # ignore leading spaces when matching for a start of
+                    # an exact type
+                    spaces = ''
+            elif token.type == Token.OP:
+                match = True
+
+            if match:
+                matched_start += 1
+                text = token.string + spaces + text
             else:
-                return text
-            cur_col = token.start[1]
+                return spaces + text
 
 
 def py2xml(filename):
@@ -222,7 +305,6 @@ def py2xml(filename):
         AstNodeX.tokens = SrcToken(fp)
     root = ast_root.to_xml()
     return root.toxml()
-    #return ET.tostring(ast_root.to_xml(), encoding='unicode')
 
 
 def xml2py(xml):
