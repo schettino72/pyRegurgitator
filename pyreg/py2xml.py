@@ -14,13 +14,14 @@ from .astview import AstNode
 
 impl = getDOMImplementation()
 DOM = impl.createDocument(None, None, None)
+DOM.Text = DOM.createTextNode
 def Element(tag_name, childs=None, text=None):
     ele = DOM.createElement(tag_name)
     if childs:
         for node in childs:
             ele.appendChild(node)
     if text:
-        ele.appendChild(DOM.createTextNode(text))
+        ele.appendChild(DOM.Text(text))
     return ele
 
 
@@ -44,6 +45,7 @@ class AstNodeX(AstNode):
         if converter:
             return converter(parent)
 
+        log.warn("**** unimplemented coverter %s", self.class_)
         # default converter
         class_info = self.MAP[self.class_]
         for field_name in class_info['order']:
@@ -95,7 +97,7 @@ class AstNodeX(AstNode):
                 self.tokens.next()
             leftmost, text = self.tokens.previous_text(
                 start_exact_type=Token.LPAR)
-            parent.appendChild(DOM.createTextNode(text))
+            parent.appendChild(DOM.Text(text))
 
         # add the expr node itself
         ast_node.to_xml(parent)
@@ -107,15 +109,17 @@ class AstNodeX(AstNode):
             text = self.tokens.previous_text(
                 max_start=par_count,
                 end_exact_type=Token.RPAR, end_space=False)
-            parent.appendChild(DOM.createTextNode(text))
+            parent.appendChild(DOM.Text(text))
         return leftmost
+
 
     def c_Expr(self, parent):
         ele = Element('Expr')
         leftmost = self.maybe_par_expr(ele, self.fields['value'].value)
         leading_text = self.tokens.previous_text(end_pos=leftmost)
-        parent.appendChild(DOM.createTextNode(leading_text))
+        parent.appendChild(DOM.Text(leading_text))
         parent.appendChild(ele)
+
 
     ###########################################################
     # expr
@@ -141,7 +145,7 @@ class AstNodeX(AstNode):
             if token.end[0] != next_token.start[0]:
                 prev_space = token.line[token.end[1]:]
             # add space before next string concatenated
-            space = DOM.createTextNode(
+            space = DOM.Text(
                 prev_space + self.tokens.previous_text())
             ele.appendChild(space)
             token = next_token
@@ -154,13 +158,13 @@ class AstNodeX(AstNode):
         for item in self.fields['elts'].value:
             self.tokens.find(item.line, item.column)
             text = self.tokens.previous_text()
-            delimiter = DOM.createTextNode(text)
+            delimiter = DOM.Text(text)
             ele.appendChild(delimiter)
             item.to_xml(ele)
         next_token = self.tokens.next()
         text = (self.tokens.previous_text() +
                 next_token.string)
-        ele.appendChild(DOM.createTextNode(text))
+        ele.appendChild(DOM.Text(text))
         parent.appendChild(ele)
 
 
@@ -190,17 +194,58 @@ class AstNodeX(AstNode):
     # stmt
     ###########################################################
 
+    def prepend_previous(self, parent):
+        """helper to prepend space, new line comments between stmt/expr"""
+        self.tokens.find(self.line, self.column)
+        leftmost = self.tokens.pos
+        leading_text = self.tokens.previous_text(end_pos=leftmost)
+        parent.appendChild(DOM.Text(leading_text))
+
+
     def c_Assign(self, parent):
+        self.prepend_previous(parent)
         targets = Element('targets')
         for child in self.fields['targets'].value:
             child.to_xml(targets)
         equal = self._before_field('value')
-        ele = Element(self.class_, childs= [
+        ele = Element('Assign', childs= [
                 targets,
-                DOM.createTextNode(equal),
+                DOM.Text(equal),
                 ])
         self.fields['value'].value.to_xml(ele)
         parent.appendChild(ele)
+
+
+    def c_Import(self, parent):
+        self.prepend_previous(parent)
+        ele = Element('Import', text='import')
+        for child in self.fields['names'].value:
+            # consume token NAME 'import' on first item...
+            # ... ot token COMMA for remaining items
+            self.tokens.next()
+            alias = Element('alias')
+            alias.appendChild(DOM.Text(self.tokens.previous_text()))
+
+            # add name
+            name = Element('name', text=child.fields['name'].value)
+            self.tokens.next() # consume token NAME '<imported-name>'
+            alias.appendChild(name)
+
+            # check if optional asname is present
+            asname = child.fields.get('asname', None)
+            if asname.value:
+                text = self.tokens.previous_text()
+                self.tokens.next() # consume token NAME 'as'
+                text += 'as' + self.tokens.previous_text()
+                self.tokens.next() # consume token NAME '<asname>'
+                alias.appendChild(DOM.Text(text))
+                alias.appendChild(Element('asname', text=asname.value))
+
+            ele.appendChild(alias)
+        parent.appendChild(ele)
+
+
+
 
 
 class SrcToken:
@@ -282,7 +327,7 @@ class SrcToken:
 
         # set tokens that are considered as "text"
         # not used if start_exact_type is specified
-        include_previous = [Token.NEWLINE, Token.NL, Token.COMMENT]
+        include_previous = [Token.NEWLINE, Token.NL, Token.COMMENT, Token.COMMA]
         if include_op:
             include_previous.append(Token.OP)
 
@@ -343,7 +388,7 @@ def py2xml(filename):
     # add remaining text at the end of the file
     ast_root.tokens.pos = len(ast_root.tokens.list) -1
     last_text = ast_root.tokens.previous_text(include_op=False)
-    root.appendChild(DOM.createTextNode(last_text))
+    root.appendChild(DOM.Text(last_text))
 
     return root.toxml()
 
