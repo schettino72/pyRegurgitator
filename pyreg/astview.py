@@ -5,7 +5,6 @@ import os
 import ast
 import json
 import argparse
-from xml.sax.saxutils import escape
 
 from pkg_resources import resource_filename
 import jinja2
@@ -46,12 +45,6 @@ class TypeField(AstField):
             str_value = repr(self.value)
         return '<span class="final">%s</span>' % str_value
 
-    def to_xml(self):
-        if isinstance(self.value, str):
-            return escape(self.value)
-        else:
-            return self.value
-
 
 class NodeField(AstField):
     def __init__(self, value, path, lines, parent):
@@ -73,10 +66,6 @@ class NodeField(AstField):
 
     def to_html(self):
         return self.value.to_html()
-
-    def to_xml(self):
-        return self.value.to_xml()
-
 
 class ListField(AstField):
     def __init__(self, value, path, lines, parent):
@@ -106,10 +95,6 @@ class ListField(AstField):
         t_body = "".join(("<tr><td>%s</td></tr>" % n.to_html() for n in self.value))
         t_foot = '</table>'
         return t_head + t_body + t_foot
-
-    def to_xml(self):
-        return [n.to_xml() for n in self.value]
-
 
 
 class AstNode(object):

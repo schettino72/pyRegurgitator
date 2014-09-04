@@ -103,6 +103,13 @@ def task_regurgitate():
             'targets': [gen_py]
             }
 
+        yield {
+            'basename': 'roundtrip',
+            'name': sample,
+            'actions':['diff {} {}'.format(sample, gen_py)],
+            'file_dep': [sample, gen_py],
+            }
+
 
 ############################
 

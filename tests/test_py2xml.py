@@ -15,8 +15,8 @@ def s2xml(tmpdir):
         result = py2xml(p.strpath)
         if strip_body:
             # the slice 14:-16 is to remove the string of
-            # the module and body tags: <Module><body> ... </body></Module>
-            return result[14:-16]
+            # the module and body tags: <Module> ... </Module>
+            return result[8:-9]
         return result
     return py_str2xml
 
@@ -79,6 +79,15 @@ class TestStatements:
             '<Assign><targets><Name ctx="Store" name="f">f</Name></targets>  =   <Num>7</Num></Assign>'
 
 
+class TestMultiline:
+    def test_2_lines(self, s2xml):
+        assert s2xml('6\n7') == '<Expr><Num>6</Num></Expr>\n<Expr><Num>7</Num></Expr>'
+
+    def test_blank_line(self, s2xml):
+        assert s2xml('6\n\n7') == '<Expr><Num>6</Num></Expr>\n\n<Expr><Num>7</Num></Expr>'
+
+    def test_comment(self, s2xml):
+        assert s2xml('6\n# my comment\n7') == '<Expr><Num>6</Num></Expr>\n# my comment\n<Expr><Num>7</Num></Expr>'
 
 
 
