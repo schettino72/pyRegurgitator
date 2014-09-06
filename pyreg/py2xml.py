@@ -216,12 +216,10 @@ class AstNodeX(AstNode):
         parent.appendChild(ele)
 
 
-    def c_Import(self, parent):
-        self.prepend_previous(parent)
-        ele = Element('Import', text='import')
+    def _c_import(self, ele, parent):
         for child in self.fields['names'].value:
             # consume token NAME 'import' on first item...
-            # ... ot token COMMA for remaining items
+            # ... or token COMMA for remaining items
             self.tokens.next()
             alias = Element('alias')
             alias.appendChild(DOM.Text(self.tokens.previous_text()))
@@ -234,6 +232,9 @@ class AstNodeX(AstNode):
             # check if optional asname is present
             asname = child.fields.get('asname', None)
             if asname.value:
+                while self.tokens.current().exact_type == Token.DOT:
+                    self.tokens.next() # dot
+                    self.tokens.next() # name
                 text = self.tokens.previous_text()
                 self.tokens.next() # consume token NAME 'as'
                 text += 'as' + self.tokens.previous_text()
@@ -244,6 +245,24 @@ class AstNodeX(AstNode):
             ele.appendChild(alias)
         parent.appendChild(ele)
 
+
+    def c_Import(self, parent):
+        self.prepend_previous(parent)
+        ele = Element('Import', text='import')
+        self._c_import(ele, parent)
+
+    def c_ImportFrom(self, parent):
+        self.prepend_previous(parent)
+        ele = Element('ImportFrom', text='from')
+        self.tokens.next() # consume token NAME 'from'
+        ele.appendChild(DOM.Text(self.tokens.previous_text()))
+        ele.appendChild(Element('module', text=self.fields['module'].value))
+        self.tokens.next() # consume token NAME <module>
+        while self.tokens.current().exact_type == Token.DOT:
+            self.tokens.next() # dot
+            self.tokens.next() # name
+        ele.appendChild(DOM.Text(self.tokens.previous_text() + 'import'))
+        self._c_import(ele, parent)
 
 
 

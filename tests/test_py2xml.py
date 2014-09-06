@@ -83,7 +83,7 @@ class TestExpressions:
 
 
 
-class TestStatements:
+class TestAssign:
     def test_assign(self, s2xml):
         assert s2xml('d = 5') == \
             '<Assign><targets><Name ctx="Store" name="d">d</Name>'\
@@ -99,6 +99,7 @@ class TestStatements:
             '<Assign><targets><Name ctx="Store" name="f">f</Name></targets>'\
             '  =   <Num>7</Num></Assign>'
 
+class TestImport:
     def test_import(self, s2xml):
         assert s2xml('import time') == \
             '<Import>import<alias> <name>time</name></alias></Import>'
@@ -120,6 +121,26 @@ class TestStatements:
             '<alias> <name>time</name> as  <asname>t2</asname></alias>'\
             '<alias>, <name>datetime</name>  as <asname>dt</asname></alias>'\
             '</Import>'
+
+    def test_import_dot_as(self, s2xml):
+        assert s2xml('import time.sleep as dorme') == \
+            '<Import>import'\
+            '<alias> <name>time.sleep</name> as <asname>dorme</asname></alias>'\
+            '</Import>'
+
+
+
+class TestImportFrom:
+    def test_importfrom(self, s2xml):
+        assert s2xml('from time import sleep') == \
+            '<ImportFrom>from <module>time</module> import'\
+            '<alias> <name>sleep</name></alias></ImportFrom>'
+
+    def test_importfrom_dot_as(self, s2xml):
+        assert s2xml('from foo.bar import baz as zeta') == \
+            '<ImportFrom>from <module>foo.bar</module> import'\
+            '<alias> <name>baz</name> as <asname>zeta</asname></alias>'\
+            '</ImportFrom>'
 
 
 
