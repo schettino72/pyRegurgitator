@@ -68,6 +68,8 @@ class TestExpressions:
     def test_expr_in_parenthesis_n(self, s2xml):
         assert s2xml('((3 )  )') == '<Expr>((<Num>3</Num> )  )</Expr>'
 
+
+class TestBinOp:
     def test_expr_in_parenthesis_any(self, s2xml):
         assert s2xml('( 2+ (3 )  )') == \
             '<Expr>( <BinOp><Num>2</Num><Add>+ </Add>(<Num>3</Num>'\
@@ -80,6 +82,27 @@ class TestExpressions:
     def test_binop_add_space(self, s2xml):
         assert s2xml('3+  4') == \
             '<Expr><BinOp><Num>3</Num><Add>+  </Add><Num>4</Num></BinOp></Expr>'
+
+
+
+class TestCall:
+    def test_call(self, s2xml):
+        assert s2xml('foo()') == \
+            '<Expr><Call><func><Name ctx="Load" name="foo">foo</Name></func>'\
+            '()</Call></Expr>'
+
+    def test_call_arg(self, s2xml):
+        assert s2xml('print(2)') == \
+            '<Expr><Call><func><Name ctx="Load" name="print">print</Name></func>'\
+            '(<args><Num>2</Num></args>)'\
+            '</Call></Expr>'
+
+    def test_call_arg(self, s2xml):
+        assert s2xml('print(2,  "xxx" )') == \
+            '<Expr><Call><func><Name ctx="Load" name="print">print</Name></func>'\
+            '(<args><Num>2</Num>,  <Str><s>"xxx"</s></Str></args> )'\
+            '</Call></Expr>'
+
 
 
 

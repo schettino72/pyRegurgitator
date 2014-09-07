@@ -41,9 +41,13 @@ class AstNodeX(AstNode):
             parent = Element(self.class_)
 
         # apply converter based on node class_
-        converter = getattr(self, 'c_'+self.class_, None)
+        converter = getattr(self, 'c_' + self.class_, None)
         if converter:
-            return converter(parent)
+            try:
+                return converter(parent)
+            except Exception as error:
+                print('Error on {}'.format(self))
+                raise
 
         log.warn("**** unimplemented coverter %s", self.class_)
         # default converter
@@ -130,7 +134,7 @@ class AstNodeX(AstNode):
 
     def c_Str(self, parent):
         ele = Element('Str')
-        token = self.tokens.find_string(self.attrs[0][1], self.attrs[1][1])
+        token = self.tokens.find(self.attrs[0][1], self.attrs[1][1])
         while True:
             ele_s = Element('s', text=token.string)
             ele.appendChild(ele_s)
@@ -186,7 +190,38 @@ class AstNodeX(AstNode):
         ele = Element(self.class_)
         self.fields['left'].value.to_xml(ele)
         ele.appendChild(Element(op.class_, text=op_text))
-        self.fields['right'].value.maybe_par_expr(ele, self.fields['right'].value)
+        self.fields['right'].value.maybe_par_expr(
+            ele, self.fields['right'].value)
+        parent.appendChild(ele)
+
+    def c_Call(self, parent):
+        print(self.tokens.current())
+        ele = Element('Call')
+
+        # func
+        ele_func = Element('func')
+        self.fields['func'].value.to_xml(ele_func)
+        ele.appendChild(ele_func)
+
+        # current parent, keeps track on where previous_text should be inserted
+        cur_parent = ele
+
+        # args
+        args = self.fields['args'].value
+        if args:
+            ele_args = Element('args')
+            for arg in self.fields['args'].value:
+                arg.prepend_previous(cur_parent)
+                arg.to_xml(ele_args)
+                cur_parent = ele_args
+            ele.appendChild(ele_args)
+
+        # close parent
+        next_token = self.tokens.next(exact_type=Token.RPAR)
+        text = (self.tokens.previous_text() +
+                next_token.string)
+        ele.appendChild(DOM.Text(text))
+
         parent.appendChild(ele)
 
 
@@ -279,7 +314,6 @@ class AstNodeX(AstNode):
         ele.appendChild(names)
 
         # level
-        print(repr(self.fields['level'].value))
         ele.setAttribute('level', str(self.fields['level'].value))
 
         # append to parent
@@ -301,11 +335,16 @@ class SrcToken:
     def current(self):
         return self.list[self.pos]
 
-    def next(self):
+    def next(self, exact_type=None):
         """return token given by self.pos"""
-        self.pos += 1
+        if exact_type:
+            while self.list[self.pos].exact_type != exact_type:
+                self.pos += 1
+        else:
+            self.pos += 1
         #log.debug('NEXT %s %s', self.pos, self.list[self.pos])
         return self.list[self.pos]
+
 
     def previous(self):
         """return token given by self.pos"""
@@ -320,22 +359,21 @@ class SrcToken:
     def find(self, line, col):
         """find token given line and column"""
         log.debug('find %s %s', line, col)
+        if col == -1:
+            return self.find_multiline_string(line, col)
         for token in self.token_iter():
             if token.start[0] == line and token.start[1] == col:
                 log.debug('FOUND %s', token)
                 return token
 
-    def find_string(self, line, col):
+    def find_multiline_string(self, line, col):
         """find string token with given position
 
         multiline strings return last line and column == -1
         """
-        if col == -1:
-            for token in self.token_iter():
-                if token.end[0] == line:
-                    return token
-        else:
-            return self.find(line, col)
+        for token in self.token_iter():
+            if token.end[0] == line:
+                return token
 
 
     def find_close_par(self, start_pos):
