@@ -104,6 +104,22 @@ class TestCall:
             '</Call></Expr>'
 
 
+class TestFuncDef_Return:
+    def test_funcdef(self, s2xml):
+        assert s2xml('def four (  ):\n    return 4') == \
+            '<FunctionDef name="four">def four<arguments> (  ):</arguments>'\
+            '<body>\n    <Return>return <Num>4</Num></Return>'\
+            '</body></FunctionDef>'
+
+    def test_funcdef_args(self, s2xml):
+        assert s2xml('def p_four  (ini ):\n    return ini + 4') == \
+            '<FunctionDef name="p_four">def p_four'\
+            '<arguments>  (<args><arg name="ini">ini</arg></args> ):</arguments>'\
+            '<body>\n    <Return>return <BinOp>'\
+            '<Name ctx="Load" name="ini">ini</Name><Add> + </Add>'\
+            '<Num>4</Num></BinOp></Return>'\
+            '</body></FunctionDef>'
+
 
 
 class TestAssign:

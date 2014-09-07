@@ -3,7 +3,7 @@ line  xixixi
 docstring
 """
 
-from time import time, ascitime
+from time import time, mktime
 
 mm = 5 + \
     9

@@ -45,7 +45,7 @@ class AstNodeX(AstNode):
         if converter:
             try:
                 return converter(parent)
-            except Exception as error:
+            except Exception:
                 print('Error on {}'.format(self))
                 raise
 
@@ -195,7 +195,6 @@ class AstNodeX(AstNode):
         parent.appendChild(ele)
 
     def c_Call(self, parent):
-        print(self.tokens.current())
         ele = Element('Call')
 
         # func
@@ -211,16 +210,14 @@ class AstNodeX(AstNode):
         if args:
             ele_args = Element('args')
             for arg in self.fields['args'].value:
-                arg.prepend_previous(cur_parent)
+                arg.prepend_previous(cur_parent, include_op=True)
                 arg.to_xml(ele_args)
                 cur_parent = ele_args
             ele.appendChild(ele_args)
 
         # close parent
-        next_token = self.tokens.next(exact_type=Token.RPAR)
-        text = (self.tokens.previous_text() +
-                next_token.string)
-        ele.appendChild(DOM.Text(text))
+        self.tokens.next(exact_type=Token.RPAR)
+        ele.appendChild(DOM.Text(self.tokens.previous_text() + ')'))
 
         parent.appendChild(ele)
 
@@ -229,12 +226,21 @@ class AstNodeX(AstNode):
     # stmt
     ###########################################################
 
-    def prepend_previous(self, parent):
+    def prepend_previous(self, parent, include_op=False):
         """helper to prepend space, new line comments between stmt/expr"""
         self.tokens.find(self.line, self.column)
         leftmost = self.tokens.pos
-        leading_text = self.tokens.previous_text(end_pos=leftmost)
+        leading_text = self.tokens.previous_text(end_pos=leftmost,
+                                                 include_op=include_op)
         parent.appendChild(DOM.Text(leading_text))
+
+
+    def _c_field_list(self, parent, field_name):
+        """must a field list that contains line, number information"""
+        ele = Element(field_name)
+        for item in self.fields[field_name].value:
+            item.to_xml(ele)
+        parent.appendChild(ele)
 
 
     def c_Assign(self, parent):
@@ -319,7 +325,51 @@ class AstNodeX(AstNode):
         # append to parent
         parent.appendChild(ele)
 
+    def c_Return(self, parent):
+        self.prepend_previous(parent)
+        self.tokens.next() # consume NAME `return`
+        ele = Element('Return', text='return' + self.tokens.previous_text())
+        self.fields['value'].value.to_xml(ele)
+        parent.appendChild(ele)
 
+    def c_FunctionDef(self, parent):
+        self.prepend_previous(parent)
+        ele = Element('FunctionDef', text='def')
+
+        # name
+        name = self.fields['name'].value
+        ele.setAttribute('name', name)
+        self.tokens.next() # consume name
+        ele.appendChild(DOM.Text(self.tokens.previous_text() + name))
+
+        # arguments
+        arguments = self.fields['args'].value
+        self.tokens.next() # consume LPAR
+        start_arguments_text = self.tokens.previous_text() + '('
+        arguments_ele = Element('arguments', text=start_arguments_text)
+
+        args = arguments.fields['args'].value
+        if args:
+            args_ele = Element('args')
+            for arg in args:
+                arg_ele = Element('arg')
+                arg_ele.setAttribute('name', arg.fields['arg'].value)
+                arg_ele.appendChild(DOM.Text(arg.fields['arg'].value))
+                args_ele.appendChild(arg_ele)
+            arguments_ele.appendChild(args_ele)
+
+        # close parent + colon
+        self.tokens.next(exact_type=Token.COLON)
+        end_arguments_text = self.tokens.previous_text()
+        if len(arguments_ele.childNodes) == 1:
+            end_arguments_text = end_arguments_text[len(start_arguments_text):]
+        arguments_ele.appendChild(DOM.Text(end_arguments_text + ':'))
+        ele.appendChild(arguments_ele)
+
+        # body
+        self._c_field_list(ele, 'body')
+
+        parent.appendChild(ele)
 
 
 class SrcToken:
@@ -405,7 +455,8 @@ class SrcToken:
 
         # set tokens that are considered as "text"
         # not used if start_exact_type is specified
-        include_previous = [Token.NEWLINE, Token.NL, Token.COMMENT, Token.COMMA]
+        include_previous = [Token.NEWLINE, Token.NL, Token.COMMENT, Token.COMMA,
+                            Token.INDENT, Token.DEDENT]
         if include_op:
             include_previous.append(Token.OP)
 
