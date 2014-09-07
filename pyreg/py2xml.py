@@ -114,6 +114,8 @@ class AstNodeX(AstNode):
                 max_start=par_count,
                 end_exact_type=Token.RPAR, end_space=False)
             parent.appendChild(DOM.Text(text))
+            self.tokens.start_limit = self.tokens.pos
+
         return leftmost
 
 
@@ -162,6 +164,7 @@ class AstNodeX(AstNode):
         text = (self.tokens.previous_text() +
                 next_token.string)
         ele.appendChild(DOM.Text(text))
+        self.tokens.start_limit = self.tokens.pos
         parent.appendChild(ele)
 
 
@@ -203,14 +206,14 @@ class AstNodeX(AstNode):
         if args:
             ele_args = Element('args')
             for arg in self.fields['args'].value:
-                arg.prepend_previous(cur_parent, include_op=True)
+                arg.prepend_previous(cur_parent)
                 arg.to_xml(ele_args)
                 cur_parent = ele_args
             ele.appendChild(ele_args)
 
         # close parent
         self.tokens.next(exact_type=Token.RPAR)
-        self.tokens.start_on = Token.RPAR
+        self.tokens.start_limit = self.tokens.pos
         ele.appendChild(DOM.Text(self.tokens.previous_text() + ')'))
 
         parent.appendChild(ele)
@@ -354,7 +357,7 @@ class AstNodeX(AstNode):
 
         # close parent + colon
         self.tokens.next(exact_type=Token.COLON)
-        self.tokens.start_on = Token.COLON
+        self.tokens.start_limit = self.tokens.pos
         end_arguments_text = self.tokens.previous_text()
         if len(arguments_ele.childNodes) == 1:
             end_arguments_text = end_arguments_text[len(start_arguments_text):]
@@ -378,9 +381,9 @@ class SrcToken:
         # ignore first element (encoding token)
         self.pos = 1
         self.list = list(tokenize(fp.readline))
-        # save a Token.OP that was already included in the XML
+        # save a Token that was already included in the XML
         # and must not be included again
-        self.start_on = None
+        self.start_limit = None
 
     def current(self):
         return self.list[self.pos]
@@ -503,10 +506,10 @@ class SrcToken:
                     # an exact type
                     spaces = ''
             elif token.type in include_previous:
-                if token.exact_type != self.start_on:
+                if end_pos != self.start_limit:
                     match = True
                 else:
-                    self.start_on = None
+                    self.start_limit = None
 
             if match:
                 matched_start += 1
@@ -530,7 +533,7 @@ def py2xml(filename):
 
     # add remaining text at the end of the file
     ast_root.tokens.pos = len(ast_root.tokens.list) - 1
-    last_text = ast_root.tokens.previous_text(include_op=False)
+    last_text = ast_root.tokens.previous_text()
     root.appendChild(DOM.Text(last_text))
 
     return root.toxml()
