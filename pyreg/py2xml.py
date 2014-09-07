@@ -143,15 +143,8 @@ class AstNodeX(AstNode):
             if next_token.type != Token.STRING:
                 self.tokens.pos -= 1
                 break
-
-            # check if next string is on a different line
-            prev_space = ''
-            if token.end[0] != next_token.start[0]:
-                prev_space = token.line[token.end[1]:]
             # add space before next string concatenated
-            space = DOM.Text(
-                prev_space + self.tokens.previous_text())
-            ele.appendChild(space)
+            ele.appendChild(DOM.Text(self.tokens.previous_text()))
             token = next_token
         parent.appendChild(ele)
 
@@ -217,6 +210,7 @@ class AstNodeX(AstNode):
 
         # close parent
         self.tokens.next(exact_type=Token.RPAR)
+        self.tokens.start_on = Token.RPAR
         ele.appendChild(DOM.Text(self.tokens.previous_text() + ')'))
 
         parent.appendChild(ele)
@@ -226,7 +220,7 @@ class AstNodeX(AstNode):
     # stmt
     ###########################################################
 
-    def prepend_previous(self, parent, include_op=False):
+    def prepend_previous(self, parent, include_op=True):
         """helper to prepend space, new line comments between stmt/expr"""
         self.tokens.find(self.line, self.column)
         leftmost = self.tokens.pos
@@ -360,6 +354,7 @@ class AstNodeX(AstNode):
 
         # close parent + colon
         self.tokens.next(exact_type=Token.COLON)
+        self.tokens.start_on = Token.COLON
         end_arguments_text = self.tokens.previous_text()
         if len(arguments_ele.childNodes) == 1:
             end_arguments_text = end_arguments_text[len(start_arguments_text):]
@@ -379,8 +374,13 @@ class SrcToken:
     type string start end line exact_type
     """
     def __init__(self, fp):
-        self.pos = 0 # current position of analised tokens
+        # current position of analised tokens
+        # ignore first element (encoding token)
+        self.pos = 1
         self.list = list(tokenize(fp.readline))
+        # save a Token.OP that was already included in the XML
+        # and must not be included again
+        self.start_on = None
 
     def current(self):
         return self.list[self.pos]
@@ -468,7 +468,10 @@ class SrcToken:
         matched_start = 0
         leftmost = end_pos
         while True:
-            cur_col = self.list[end_pos].start[1]
+            # calculate the spaces betwen 2 tokens
+            # <token>____<cur>
+            current = self.list[end_pos]
+            current_col = current.start[1]
             end_pos -= 1
             token = self.list[end_pos]
             if searching_end:
@@ -478,9 +481,17 @@ class SrcToken:
                     searching_end = False
                     self.pos = end_pos
                     if not end_space:
-                        cur_col = token.end[1]
-            spaces = ' ' * (cur_col - token.end[1])
+                        current_col = token.end[1]
+            if current.start[0] == token.end[0]:
+                # same line, just add spaces
+                spaces = ' ' * (current_col - token.end[1])
+            elif current.type == Token.ENDMARKER:
+                spaces = ''
+            else:
+                spaces = token.line[token.end[1]:] + ' ' * current_col
 
+
+            # `match` defines if token is of the type we were looking for
             match = False
             if max_start and matched_start >= max_start:
                 pass
@@ -492,7 +503,10 @@ class SrcToken:
                     # an exact type
                     spaces = ''
             elif token.type in include_previous:
-                match = True
+                if token.exact_type != self.start_on:
+                    match = True
+                else:
+                    self.start_on = None
 
             if match:
                 matched_start += 1
@@ -515,7 +529,7 @@ def py2xml(filename):
     root = ast_root.to_xml()
 
     # add remaining text at the end of the file
-    ast_root.tokens.pos = len(ast_root.tokens.list) -1
+    ast_root.tokens.pos = len(ast_root.tokens.list) - 1
     last_text = ast_root.tokens.previous_text(include_op=False)
     root.appendChild(DOM.Text(last_text))
 

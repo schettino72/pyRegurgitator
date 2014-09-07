@@ -49,7 +49,7 @@ line 2""" '''
         string = r"""'part 1'  \
  ' /part 2'"""
         assert s2xml(string) == "<Expr><Str><s>'part 1'</s>  \\\n"\
-            "<s>' /part 2'</s></Str></Expr>"
+            " <s>' /part 2'</s></Str></Expr>"
 
     def test_tuple(self, s2xml):
         assert s2xml('(1,2,3)') == '<Expr><Tuple ctx="Load">(<Num>1</Num>'\
@@ -67,6 +67,28 @@ class TestExpressions:
 
     def test_expr_in_parenthesis_n(self, s2xml):
         assert s2xml('((3 )  )') == '<Expr>((<Num>3</Num> )  )</Expr>'
+
+    def test_expr_with_line_continuation(self, s2xml):
+        assert s2xml('''mm = 5 + \\\n  9''') == \
+            '<Assign><targets><Name ctx="Store" name="mm">mm</Name></targets>'\
+            ' = <BinOp><Num>5</Num><Add> + \\\n  </Add><Num>9</Num></BinOp>'\
+            '</Assign>'
+
+    def test_expr_semi_colon_separated(self, s2xml):
+        assert s2xml('3; 5') == \
+            '<Expr><Num>3</Num></Expr>'\
+            '; <Expr><Num>5</Num></Expr>'
+
+    def test_expr_semi_colon_separated2(self, s2xml):
+        assert s2xml('x=3; y=5') == \
+            '<Assign>'\
+            '<targets><Name ctx="Store" name="x">x</Name></targets>'\
+            '=<Num>3</Num></Assign>'\
+            '; <Assign>'\
+            '<targets><Name ctx="Store" name="y">y</Name></targets>'\
+            '=<Num>5</Num></Assign>'
+
+
 
 
 class TestBinOp:
@@ -104,20 +126,27 @@ class TestCall:
             '</Call></Expr>'
 
 
-class TestFuncDef_Return:
+class TestFuncDef:
     def test_funcdef(self, s2xml):
-        assert s2xml('def four (  ):\n    return 4') == \
+        assert s2xml('def four (  ):\n    4') == \
             '<FunctionDef name="four">def four<arguments> (  ):</arguments>'\
-            '<body>\n    <Return>return <Num>4</Num></Return>'\
-            '</body></FunctionDef>'
+            '<body>\n    <Expr><Num>4</Num></Expr></body></FunctionDef>'
 
-    def test_funcdef_args(self, s2xml):
+    def test_funcdef_arg(self, s2xml):
         assert s2xml('def p_four  (ini ):\n    return ini + 4') == \
             '<FunctionDef name="p_four">def p_four'\
             '<arguments>  (<args><arg name="ini">ini</arg></args> ):</arguments>'\
             '<body>\n    <Return>return <BinOp>'\
             '<Name ctx="Load" name="ini">ini</Name><Add> + </Add>'\
             '<Num>4</Num></BinOp></Return>'\
+            '</body></FunctionDef>'
+
+
+class TestReturn:
+    def test_return_single(self, s2xml):
+        assert s2xml('def four (  ):\n    return 4') == \
+            '<FunctionDef name="four">def four<arguments> (  ):</arguments>'\
+            '<body>\n    <Return>return <Num>4</Num></Return>'\
             '</body></FunctionDef>'
 
 
