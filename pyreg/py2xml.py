@@ -69,14 +69,9 @@ class AstNodeX(AstNode):
     def maybe_par_expr(self, parent, ast_node):
         """deal with optional "()" around an expression"""
         have_parenthesis = False
-        leftmost = None # leftmost token position
 
         # get token
-        if ast_node.column != -1:
-            token = self.tokens.find(self.line, self.column)
-            leftmost = self.tokens.pos
-        # else: TODO
-
+        token = self.tokens.find(self.line, self.column)
 
         # Figure out if expression has parenthis or not.
         # assume tuples wont have it
@@ -91,7 +86,6 @@ class AstNodeX(AstNode):
                 if token.exact_type == Token.LPAR:
                     have_parenthesis = True
 
-
         # add left parenthesis.
         if have_parenthesis:
             start_token = self.tokens.pos
@@ -99,7 +93,7 @@ class AstNodeX(AstNode):
             while self.tokens.current().exact_type == Token.LPAR:
                 par_count += 1
                 self.tokens.next()
-            leftmost, text = self.tokens.previous_text(
+            text = self.tokens.previous_text(
                 start_exact_type=Token.LPAR)
             parent.appendChild(DOM.Text(text))
 
@@ -116,14 +110,11 @@ class AstNodeX(AstNode):
             parent.appendChild(DOM.Text(text))
             self.tokens.start_limit = self.tokens.pos
 
-        return leftmost
-
 
     def c_Expr(self, parent):
+        self.prepend_previous(parent)
         ele = Element('Expr')
-        leftmost = self.maybe_par_expr(ele, self.fields['value'].value)
-        leading_text = self.tokens.previous_text(end_pos=leftmost)
-        parent.appendChild(DOM.Text(leading_text))
+        self.maybe_par_expr(ele, self.fields['value'].value)
         parent.appendChild(ele)
 
 
@@ -516,10 +507,6 @@ class SrcToken:
                 text = token.string + spaces + text
                 leftmost = end_pos
             else:
-                # asked for start_exact_type, return tuple include leftmost
-                # token position
-                if start_exact_type:
-                    return leftmost, spaces + text
                 return spaces + text
 
 

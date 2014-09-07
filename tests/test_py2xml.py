@@ -240,7 +240,12 @@ class TestMultiline:
         assert s2xml('6\n# my comment\n7') == \
             '<Expr><Num>6</Num></Expr>\n# my comment\n<Expr><Num>7</Num></Expr>'
 
-
+    def test_2line_end_with_op(self, s2xml):
+        assert s2xml('foo()\nbar()\n') == \
+            '<Expr><Call><func><Name ctx="Load" name="foo">foo</Name>'\
+            '</func>()</Call></Expr>\n'\
+            '<Expr><Call><func><Name ctx="Load" name="bar">bar</Name>'\
+            '</func>()</Call></Expr>\n'
 
 def test_xml2py():
     assert xml2py('<a>x<b>y</b>z</a>') == 'xyz'
