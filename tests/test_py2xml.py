@@ -133,13 +133,37 @@ class TestFuncDef:
             '<body>\n    <Expr><Num>4</Num></Expr></body></FunctionDef>'
 
     def test_funcdef_arg(self, s2xml):
-        assert s2xml('def p_four  (ini ):\n    return ini + 4') == \
+        assert s2xml('def p_four  ( ini ):\n    return ini + 4') == \
             '<FunctionDef name="p_four">def p_four'\
-            '<arguments>  (<args><arg name="ini">ini</arg></args> ):</arguments>'\
+            '<arguments>  (<args> <arg name="ini">ini</arg></args> ):</arguments>'\
             '<body>\n    <Return>return <BinOp>'\
             '<Name ctx="Load" name="ini">ini</Name><Add> + </Add>'\
             '<Num>4</Num></BinOp></Return>'\
             '</body></FunctionDef>'
+
+    def test_funcdef_args(self, s2xml):
+        assert s2xml('def foo(a,  b):\n    pass') == \
+            '<FunctionDef name="foo">def foo'\
+            '<arguments>(<args><arg name="a">a</arg>,  '\
+            '<arg name="b">b</arg></args>):</arguments>'\
+            '<body>\n    <Pass>pass</Pass></body></FunctionDef>'
+
+    def test_funcdef_args_default(self, s2xml):
+        assert s2xml('def foo(a,  b= 5):\n    pass') == \
+            '<FunctionDef name="foo">def foo'\
+            '<arguments>(<args><arg name="a">a</arg>,  '\
+            '<arg name="b">b<default>= <Num>5</Num></default></arg>'\
+            '</args>):</arguments>'\
+            '<body>\n    <Pass>pass</Pass></body></FunctionDef>'
+
+    def test_funcdef_args_defaults(self, s2xml):
+        assert s2xml('def foo(a=3, b= 5):\n    pass') == \
+            '<FunctionDef name="foo">def foo'\
+            '<arguments>('\
+            '<args><arg name="a">a<default>=<Num>3</Num></default></arg>, '\
+            '<arg name="b">b<default>= <Num>5</Num></default></arg>'\
+            '</args>):</arguments>'\
+            '<body>\n    <Pass>pass</Pass></body></FunctionDef>'
 
 
 class TestReturn:

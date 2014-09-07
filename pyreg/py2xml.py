@@ -166,7 +166,6 @@ class AstNodeX(AstNode):
         parent.appendChild(ele)
 
 
-
     def c_BinOp(self, parent):
         op = self.fields['op'].value
         orig_pos = self.tokens.pos
@@ -180,6 +179,7 @@ class AstNodeX(AstNode):
         self.fields['right'].value.maybe_par_expr(
             ele, self.fields['right'].value)
         parent.appendChild(ele)
+
 
     def c_Call(self, parent):
         ele = Element('Call')
@@ -230,6 +230,10 @@ class AstNodeX(AstNode):
             item.to_xml(ele)
         parent.appendChild(ele)
 
+
+    def c_Pass(self, parent):
+        self.prepend_previous(parent)
+        parent.appendChild(Element('Pass', text='pass'))
 
     def c_Assign(self, parent):
         self.prepend_previous(parent)
@@ -334,15 +338,30 @@ class AstNodeX(AstNode):
         arguments = self.fields['args'].value
         self.tokens.next() # consume LPAR
         start_arguments_text = self.tokens.previous_text() + '('
+        self.tokens.start_limit = self.tokens.pos
         arguments_ele = Element('arguments', text=start_arguments_text)
 
         args = arguments.fields['args'].value
         if args:
+            f_defaults = arguments.fields['defaults'].value
+            defaults = ([None] * (len(args) - len(f_defaults))) + f_defaults
             args_ele = Element('args')
-            for arg in args:
+            for arg, default in zip(args, defaults):
+                self.tokens.next() # consume LPAR / COMMA
+                args_ele.appendChild(DOM.Text(self.tokens.previous_text()))
                 arg_ele = Element('arg')
                 arg_ele.setAttribute('name', arg.fields['arg'].value)
                 arg_ele.appendChild(DOM.Text(arg.fields['arg'].value))
+                self.tokens.next() # consume NAME
+                if default:
+                    self.tokens.find(default.line, default.column)
+                    text = self.tokens.previous_text()
+                    default_ele = Element('default', text=text)
+                    default.to_xml(default_ele)
+                    arg_ele.appendChild(default_ele)
+                    # FIXME how to find end of expression?
+                    self.tokens.next()
+
                 args_ele.appendChild(arg_ele)
             arguments_ele.appendChild(args_ele)
 
@@ -460,7 +479,6 @@ class SrcToken:
         # once it is found, stop checking end_exact_type
         searching_end = end_exact_type is not None
         matched_start = 0
-        leftmost = end_pos
         while True:
             # calculate the spaces betwen 2 tokens
             # <token>____<cur>
@@ -505,7 +523,6 @@ class SrcToken:
             if match:
                 matched_start += 1
                 text = token.string + spaces + text
-                leftmost = end_pos
             else:
                 return spaces + text
 
