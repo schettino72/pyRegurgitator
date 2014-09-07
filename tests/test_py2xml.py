@@ -133,14 +133,29 @@ class TestImport:
 class TestImportFrom:
     def test_importfrom(self, s2xml):
         assert s2xml('from time import sleep') == \
-            '<ImportFrom>from <module>time</module> import'\
-            '<alias> <name>sleep</name></alias></ImportFrom>'
+            '<ImportFrom level="0">from <module>time</module> import'\
+            '<names><alias> <name>sleep</name></alias></names>'\
+            '</ImportFrom>'
 
     def test_importfrom_dot_as(self, s2xml):
         assert s2xml('from foo.bar import baz as zeta') == \
-            '<ImportFrom>from <module>foo.bar</module> import'\
-            '<alias> <name>baz</name> as <asname>zeta</asname></alias>'\
+            '<ImportFrom level="0">from <module>foo.bar</module> import'\
+            '<names><alias> <name>baz</name> as <asname>zeta</asname>'\
+            '</alias></names></ImportFrom>'
+
+    def test_importfrom_level(self, s2xml):
+        assert s2xml('from .foo import bar,  baz as zeta') == \
+            '<ImportFrom level="1">from .<module>foo</module> import<names>'\
+            '<alias> <name>bar</name></alias>'\
+            '<alias>,  <name>baz</name> as <asname>zeta</asname></alias>'\
+            '</names>'\
             '</ImportFrom>'
+
+    def test_importfrom_level2_module_none(self, s2xml):
+        assert s2xml('from .. import bar') == \
+            '<ImportFrom level="2">from ..<module/> import<names>'\
+            '<alias> <name>bar</name></alias>'\
+            '</names></ImportFrom>'
 
 
 

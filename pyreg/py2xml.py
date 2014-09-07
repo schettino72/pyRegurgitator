@@ -216,7 +216,7 @@ class AstNodeX(AstNode):
         parent.appendChild(ele)
 
 
-    def _c_import(self, ele, parent):
+    def _c_import_names(self, ele):
         for child in self.fields['names'].value:
             # consume token NAME 'import' on first item...
             # ... or token COMMA for remaining items
@@ -243,26 +243,47 @@ class AstNodeX(AstNode):
                 alias.appendChild(Element('asname', text=asname.value))
 
             ele.appendChild(alias)
-        parent.appendChild(ele)
 
 
     def c_Import(self, parent):
         self.prepend_previous(parent)
         ele = Element('Import', text='import')
-        self._c_import(ele, parent)
+        self._c_import_names(ele)
+        parent.appendChild(ele)
 
     def c_ImportFrom(self, parent):
         self.prepend_previous(parent)
-        ele = Element('ImportFrom', text='from')
+
+        # from <module>
         self.tokens.next() # consume token NAME 'from'
-        ele.appendChild(DOM.Text(self.tokens.previous_text()))
-        ele.appendChild(Element('module', text=self.fields['module'].value))
-        self.tokens.next() # consume token NAME <module>
+        from_text = 'from'
+        from_text += self.tokens.previous_text()
+        # get level dots
         while self.tokens.current().exact_type == Token.DOT:
+            from_text += '.'
             self.tokens.next() # dot
-            self.tokens.next() # name
-        ele.appendChild(DOM.Text(self.tokens.previous_text() + 'import'))
-        self._c_import(ele, parent)
+        ele = Element('ImportFrom', text=from_text)
+        # get module name
+        ele.appendChild(Element('module', text=self.fields['module'].value))
+        if self.tokens.current().string != 'import':
+            self.tokens.next() # consume token NAME <module>
+            while self.tokens.current().exact_type == Token.DOT:
+                self.tokens.next() # dot
+                self.tokens.next() # name
+        import_prev_space = self.tokens.previous_text(include_op=False)
+        ele.appendChild(DOM.Text(import_prev_space + 'import'))
+
+        # names
+        names = Element('names')
+        self._c_import_names(names)
+        ele.appendChild(names)
+
+        # level
+        print(repr(self.fields['level'].value))
+        ele.setAttribute('level', str(self.fields['level'].value))
+
+        # append to parent
+        parent.appendChild(ele)
 
 
 
