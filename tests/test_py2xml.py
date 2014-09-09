@@ -226,6 +226,27 @@ class TestFuncDef:
             '<FunctionDef name="foo">def foo''<arguments>():</arguments>'\
             '<body>\n    # comment\n    <Pass>pass</Pass></body></FunctionDef>'
 
+    def test_funcdef_after(self, s2xml):
+        assert s2xml('def foo():\n    pass\n8') == \
+            '<FunctionDef name="foo">def foo''<arguments>():</arguments>'\
+            '<body>\n    <Pass>pass</Pass></body></FunctionDef>\n'\
+            '<Expr><Num>8</Num></Expr>'
+
+
+class TestClassDef:
+    def test_classdef(self, s2xml):
+        assert s2xml('class Foo (  ) :\n    pass') == \
+            '<ClassDef name="Foo">class Foo<arguments> (  ) :</arguments>'\
+            '<body>\n    <Pass>pass</Pass></body></ClassDef>'
+
+    def test_classdef_bases(self, s2xml):
+        assert s2xml('class Foo (Base) :\n    pass') == \
+            '<ClassDef name="Foo">class Foo<arguments> ('\
+            '<bases><Name ctx="Load" name="Base">Base</Name></bases>'\
+            ') :</arguments>'\
+            '<body>\n    <Pass>pass</Pass></body></ClassDef>'
+
+
 
 class TestReturn:
     def test_return_single(self, s2xml):

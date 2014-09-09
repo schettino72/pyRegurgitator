@@ -227,6 +227,7 @@ class AstNodeX(AstNode):
     def c_Pass(self, parent):
         self.tokens.write_non_ast_tokens(parent)
         parent.appendChild(Element('Pass', text='pass'))
+        assert self.tokens.pop().string == 'pass'
 
     def c_Assign(self, parent):
         self.tokens.write_non_ast_tokens(parent)
@@ -370,9 +371,42 @@ class AstNodeX(AstNode):
 
         # body
         self._c_field_list(ele, 'body')
-
         parent.appendChild(ele)
 
+
+    def c_ClassDef(self, parent):
+        self.tokens.write_non_ast_tokens(parent)
+        ele = Element('ClassDef', text='class')
+        assert self.tokens.pop().type == Token.NAME
+
+        # name
+        assert self.tokens.pop().type == Token.NAME
+        name = self.fields['name'].value
+        ele.setAttribute('name', name)
+        text = self.tokens.prev_space() + name
+        ele.appendChild(DOM.Text(text))
+
+        # arguments
+        assert self.tokens.pop().exact_type == Token.LPAR
+        start_arguments_text = self.tokens.text_prev2next()
+        arguments_ele = Element('arguments', text=start_arguments_text)
+
+        bases = self.fields['bases'].value
+        if bases:
+            bases_ele = Element('bases')
+            self._c_comma_delimitted(bases_ele, bases)
+            arguments_ele.appendChild(bases_ele)
+
+        # close arguments
+        assert self.tokens.pop().exact_type == Token.RPAR
+        arguments_ele.appendChild(DOM.Text(')'))
+        assert self.tokens.pop().exact_type == Token.COLON
+        arguments_ele.appendChild(DOM.Text(self.tokens.prev_space() + ':'))
+        ele.appendChild(arguments_ele)
+
+        # body
+        self._c_field_list(ele, 'body')
+        parent.appendChild(ele)
 
 
 
