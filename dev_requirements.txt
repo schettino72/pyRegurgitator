@@ -1,3 +1,5 @@
 pyflakes
+pytest
 doit
 doit-py
+coverage

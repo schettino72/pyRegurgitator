@@ -22,7 +22,7 @@ setup(name = 'pyRegurgitator',
                      'Natural Language :: English',
                      'Operating System :: OS Independent',
                      'Operating System :: POSIX',
-                     'Programming Language :: Python :: 3.3',
+                     'Programming Language :: Python :: 3.4',
                      'Topic :: Software Development',
                      ],
 

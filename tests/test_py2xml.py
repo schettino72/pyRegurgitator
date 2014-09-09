@@ -51,52 +51,22 @@ line 2""" '''
         assert s2xml(string) == "<Expr><Str><s>'part 1'</s>  \\\n"\
             " <s>' /part 2'</s></Str></Expr>"
 
+
+class TestTuple:
     def test_tuple(self, s2xml):
-        assert s2xml('(1,2,3)') == '<Expr><Tuple ctx="Load">(<Num>1</Num>'\
-            ',<Num>2</Num>,<Num>3</Num>)</Tuple></Expr>'
+        assert s2xml('1,2,3') == '<Expr><Tuple ctx="Load"><Num>1</Num>'\
+            ',<Num>2</Num>,<Num>3</Num></Tuple></Expr>'
 
     def test_tuple_space(self, s2xml):
-        assert s2xml('(  1, 2,3 )') == '<Expr><Tuple ctx="Load">'\
-            '(  <Num>1</Num>, <Num>2</Num>,<Num>3</Num> )</Tuple></Expr>'
+        assert s2xml('1, 2 ,  3') == '<Expr><Tuple ctx="Load">'\
+            '<Num>1</Num>, <Num>2</Num> ,  <Num>3</Num></Tuple></Expr>'
 
-
-
-class TestExpressions:
-    def test_expr_in_parenthesis(self, s2xml):
-        assert s2xml('(3 )') == '<Expr>(<Num>3</Num> )</Expr>'
-
-    def test_expr_in_parenthesis_n(self, s2xml):
-        assert s2xml('((3 )  )') == '<Expr>((<Num>3</Num> )  )</Expr>'
-
-    def test_expr_with_line_continuation(self, s2xml):
-        assert s2xml('''mm = 5 + \\\n  9''') == \
-            '<Assign><targets><Name ctx="Store" name="mm">mm</Name></targets>'\
-            ' = <BinOp><Num>5</Num><Add> + \\\n  </Add><Num>9</Num></BinOp>'\
-            '</Assign>'
-
-    def test_expr_semi_colon_separated(self, s2xml):
-        assert s2xml('3; 5') == \
-            '<Expr><Num>3</Num></Expr>'\
-            '; <Expr><Num>5</Num></Expr>'
-
-    def test_expr_semi_colon_separated2(self, s2xml):
-        assert s2xml('x=3; y=5') == \
-            '<Assign>'\
-            '<targets><Name ctx="Store" name="x">x</Name></targets>'\
-            '=<Num>3</Num></Assign>'\
-            '; <Assign>'\
-            '<targets><Name ctx="Store" name="y">y</Name></targets>'\
-            '=<Num>5</Num></Assign>'
-
-
+    def test_tuple_end_comma(self, s2xml):
+        assert s2xml('1, 2 ,') == '<Expr><Tuple ctx="Load">'\
+            '<Num>1</Num>, <Num>2</Num> ,</Tuple></Expr>'
 
 
 class TestBinOp:
-    def test_expr_in_parenthesis_any(self, s2xml):
-        assert s2xml('( 2+ (3 )  )') == \
-            '<Expr>( <BinOp><Num>2</Num><Add>+ </Add>(<Num>3</Num>'\
-            ' )</BinOp>  )</Expr>'
-
     def test_binop_add(self, s2xml):
         assert s2xml('1 + 2') == \
             '<Expr><BinOp><Num>1</Num><Add> + </Add><Num>2</Num></BinOp></Expr>'
@@ -104,6 +74,63 @@ class TestBinOp:
     def test_binop_add_space(self, s2xml):
         assert s2xml('3+  4') == \
             '<Expr><BinOp><Num>3</Num><Add>+  </Add><Num>4</Num></BinOp></Expr>'
+
+    def test_binop_multiply(self, s2xml):
+        assert s2xml('1 *2') == \
+            '<Expr><BinOp><Num>1</Num><Mult> *</Mult><Num>2</Num></BinOp></Expr>'
+
+    def test_binop_subtract(self, s2xml):
+        assert s2xml('1 - 2') == \
+            '<Expr><BinOp><Num>1</Num><Sub> - </Sub><Num>2</Num></BinOp></Expr>'
+
+
+
+class TestExpressions:
+    def test_expr_in_parenthesis(self, s2xml):
+        assert s2xml('(3 )') == '<Expr>(<Num>3</Num> )</Expr>'
+
+    def test_tuple_in_parenthesis(self, s2xml):
+        assert s2xml('( 3 , 4 , )') == \
+            '<Expr>( <Tuple ctx="Load"><Num>3</Num> , <Num>4</Num>'\
+            ' ,</Tuple> )</Expr>'
+
+    def test_expr_in_parenthesis2(self, s2xml):
+        assert s2xml('(  3 )') == '<Expr>(  <Num>3</Num> )</Expr>'
+
+    def test_expr_with_line_continuation(self, s2xml):
+        assert s2xml('''5 + \\\n  9''') == \
+            '<Expr><BinOp><Num>5</Num><Add> + \\\n  </Add><Num>9</Num></BinOp></Expr>'
+
+    def test_expr_semi_colon_separated(self, s2xml):
+        assert s2xml('3 ; 5') == \
+            '<Expr><Num>3</Num></Expr>'\
+            ' ; <Expr><Num>5</Num></Expr>'
+
+    def test_expr_in_parenthesis_any(self, s2xml):
+        assert s2xml('( 2+ (3 )  )') == \
+            '<Expr>( <BinOp><Num>2</Num><Add>+ </Add>(<Num>3</Num>'\
+            ' )</BinOp>  )</Expr>'
+
+
+
+
+class TestMultiline:
+    def test_2_lines(self, s2xml):
+        assert s2xml('6\n7') == \
+            '<Expr><Num>6</Num></Expr>\n<Expr><Num>7</Num></Expr>'
+
+    def test_blank_line(self, s2xml):
+        assert s2xml('6\n\n7') == \
+            '<Expr><Num>6</Num></Expr>\n\n<Expr><Num>7</Num></Expr>'
+
+    def test_comment(self, s2xml):
+        assert s2xml('6\n# my comment\n7') == \
+            '<Expr><Num>6</Num></Expr>\n# my comment\n<Expr><Num>7</Num></Expr>'
+
+    def test_2line_end_with_op(self, s2xml):
+        assert s2xml('(4)\n(5)\n') == \
+            '<Expr>(<Num>4</Num>)</Expr>\n'\
+            '<Expr>(<Num>5</Num>)</Expr>\n'
 
 
 
@@ -119,7 +146,13 @@ class TestCall:
             '(<args><Num>2</Num></args>)'\
             '</Call></Expr>'
 
-    def test_call_arg(self, s2xml):
+    def test_call_arg_spaces(self, s2xml):
+        assert s2xml('print (  2   )') == \
+            '<Expr><Call><func><Name ctx="Load" name="print">print</Name></func>'\
+            ' (  <args><Num>2</Num></args>   )'\
+            '</Call></Expr>'
+
+    def test_call_arg2(self, s2xml):
         assert s2xml('print(2,  "xxx" )') == \
             '<Expr><Call><func><Name ctx="Load" name="print">print</Name></func>'\
             '(<args><Num>2</Num>,  <Str><s>"xxx"</s></Str></args> )'\
@@ -191,6 +224,16 @@ class TestAssign:
             '<Assign><targets><Name ctx="Store" name="f">f</Name></targets>'\
             '  =   <Num>7</Num></Assign>'
 
+    def test_expr_semi_colon_separated2(self, s2xml):
+        assert s2xml('x=3; y=5') == \
+            '<Assign>'\
+            '<targets><Name ctx="Store" name="x">x</Name></targets>'\
+            '=<Num>3</Num></Assign>'\
+            '; <Assign>'\
+            '<targets><Name ctx="Store" name="y">y</Name></targets>'\
+            '=<Num>5</Num></Assign>'
+
+
 class TestImport:
     def test_import(self, s2xml):
         assert s2xml('import time') == \
@@ -205,13 +248,13 @@ class TestImport:
     def test_import_multi(self, s2xml):
         assert s2xml('import time ,  datetime') == \
             '<Import>import<alias> <name>time</name></alias>'\
-            '<alias> ,  <name>datetime</name></alias></Import>'
+            ' ,<alias>  <name>datetime</name></alias></Import>'
 
     def test_import_as_multi(self, s2xml):
         assert s2xml('import time as  t2, datetime  as dt') == \
             '<Import>import'\
             '<alias> <name>time</name> as  <asname>t2</asname></alias>'\
-            '<alias>, <name>datetime</name>  as <asname>dt</asname></alias>'\
+            ',<alias> <name>datetime</name>  as <asname>dt</asname></alias>'\
             '</Import>'
 
     def test_import_dot_as(self, s2xml):
@@ -239,7 +282,7 @@ class TestImportFrom:
         assert s2xml('from .foo import bar,  baz as zeta') == \
             '<ImportFrom level="1">from .<module>foo</module> import<names>'\
             '<alias> <name>bar</name></alias>'\
-            '<alias>,  <name>baz</name> as <asname>zeta</asname></alias>'\
+            ',<alias>  <name>baz</name> as <asname>zeta</asname></alias>'\
             '</names>'\
             '</ImportFrom>'
 
@@ -249,27 +292,6 @@ class TestImportFrom:
             '<alias> <name>bar</name></alias>'\
             '</names></ImportFrom>'
 
-
-
-class TestMultiline:
-    def test_2_lines(self, s2xml):
-        assert s2xml('6\n7') == \
-            '<Expr><Num>6</Num></Expr>\n<Expr><Num>7</Num></Expr>'
-
-    def test_blank_line(self, s2xml):
-        assert s2xml('6\n\n7') == \
-            '<Expr><Num>6</Num></Expr>\n\n<Expr><Num>7</Num></Expr>'
-
-    def test_comment(self, s2xml):
-        assert s2xml('6\n# my comment\n7') == \
-            '<Expr><Num>6</Num></Expr>\n# my comment\n<Expr><Num>7</Num></Expr>'
-
-    def test_2line_end_with_op(self, s2xml):
-        assert s2xml('foo()\nbar()\n') == \
-            '<Expr><Call><func><Name ctx="Load" name="foo">foo</Name>'\
-            '</func>()</Call></Expr>\n'\
-            '<Expr><Call><func><Name ctx="Load" name="bar">bar</Name>'\
-            '</func>()</Call></Expr>\n'
 
 def test_xml2py():
     assert xml2py('<a>x<b>y</b>z</a>') == 'xyz'
