@@ -66,6 +66,43 @@ class TestTuple:
             '<Num>1</Num>, <Num>2</Num> ,</Tuple></Expr>'
 
 
+class TestExpressions:
+    def test_expr_in_parenthesis(self, s2xml):
+        assert s2xml('(3 )') == '<Expr>(<Num>3</Num> )</Expr>'
+
+    def test_tuple_in_parenthesis(self, s2xml):
+        assert s2xml('( 3 , 4 , )') == \
+            '<Expr>( <Tuple ctx="Load"><Num>3</Num> , <Num>4</Num>'\
+            ' ,</Tuple> )</Expr>'
+
+    def test_expr_in_parenthesis2(self, s2xml):
+        assert s2xml('(  3 )') == '<Expr>(  <Num>3</Num> )</Expr>'
+
+    def test_expr_semi_colon_separated(self, s2xml):
+        assert s2xml('3 ; 5') == \
+            '<Expr><Num>3</Num></Expr>'\
+            ' ; <Expr><Num>5</Num></Expr>'
+
+
+
+class TestList:
+    def test_list(self, s2xml):
+        assert s2xml('[1,2,3]') == '<Expr><List ctx="Load">[<Num>1</Num>'\
+            ',<Num>2</Num>,<Num>3</Num>]</List></Expr>'
+
+    def test_list_empty(self, s2xml):
+        assert s2xml('[ ]') == '<Expr><List ctx="Load">[ ]</List></Expr>'
+
+    def test_list_end_comma(self, s2xml):
+        assert s2xml('[ 1 , 2 , ]') == '<Expr><List ctx="Load">[ <Num>1</Num>'\
+            ' , <Num>2</Num> , ]</List></Expr>'
+
+    def test_list_multiline(self, s2xml):
+        assert s2xml('[ 1,\n  2,\n ]') == \
+            '<Expr><List ctx="Load">[ <Num>1</Num>'\
+            ',\n  <Num>2</Num>,\n ]</List></Expr>'
+
+
 class TestBinOp:
     def test_binop_add(self, s2xml):
         assert s2xml('1 + 2') == \
@@ -83,28 +120,9 @@ class TestBinOp:
         assert s2xml('1 - 2') == \
             '<Expr><BinOp><Num>1</Num><Sub> - </Sub><Num>2</Num></BinOp></Expr>'
 
-
-
-class TestExpressions:
-    def test_expr_in_parenthesis(self, s2xml):
-        assert s2xml('(3 )') == '<Expr>(<Num>3</Num> )</Expr>'
-
-    def test_tuple_in_parenthesis(self, s2xml):
-        assert s2xml('( 3 , 4 , )') == \
-            '<Expr>( <Tuple ctx="Load"><Num>3</Num> , <Num>4</Num>'\
-            ' ,</Tuple> )</Expr>'
-
-    def test_expr_in_parenthesis2(self, s2xml):
-        assert s2xml('(  3 )') == '<Expr>(  <Num>3</Num> )</Expr>'
-
     def test_expr_with_line_continuation(self, s2xml):
         assert s2xml('''5 + \\\n  9''') == \
             '<Expr><BinOp><Num>5</Num><Add> + \\\n  </Add><Num>9</Num></BinOp></Expr>'
-
-    def test_expr_semi_colon_separated(self, s2xml):
-        assert s2xml('3 ; 5') == \
-            '<Expr><Num>3</Num></Expr>'\
-            ' ; <Expr><Num>5</Num></Expr>'
 
     def test_expr_in_parenthesis_any(self, s2xml):
         assert s2xml('( 2+ (3 )  )') == \
@@ -158,6 +176,11 @@ class TestCall:
             '(<args><Num>2</Num>,  <Str><s>"xxx"</s></Str></args> )'\
             '</Call></Expr>'
 
+    def test_call_comment(self, s2xml):
+        assert s2xml('foo() #') == \
+            '<Expr><Call><func><Name ctx="Load" name="foo">foo</Name></func>'\
+            '()</Call></Expr> #'
+
 
 class TestFuncDef:
     def test_funcdef(self, s2xml):
@@ -197,6 +220,11 @@ class TestFuncDef:
             '<arg name="b">b<default>= <Num>5</Num></default></arg>'\
             '</args>):</arguments>'\
             '<body>\n    <Pass>pass</Pass></body></FunctionDef>'
+
+    def test_funcdef_comment(self, s2xml):
+        assert s2xml('def foo():\n    # comment\n    pass') == \
+            '<FunctionDef name="foo">def foo''<arguments>():</arguments>'\
+            '<body>\n    # comment\n    <Pass>pass</Pass></body></FunctionDef>'
 
 
 class TestReturn:

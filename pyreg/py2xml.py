@@ -94,9 +94,9 @@ class AstNodeX(AstNode):
             if index:
                 ele.appendChild(DOM.Text(self.tokens.space_right()))
             item.to_xml(ele)
-            if self.tokens.next().exact_type == Token.COMMA:
-                self.tokens.pop()
-                text = self.tokens.prev_space() + ','
+            while self.tokens.next().exact_type in (Token.COMMA, Token.NL):
+                token = self.tokens.pop()
+                text = self.tokens.prev_space() + token.string
                 ele.appendChild(DOM.Text(text))
 
 
@@ -129,6 +129,25 @@ class AstNodeX(AstNode):
         ele = Element('Tuple')
         ele.setAttribute('ctx', self.fields['ctx'].value.class_)
         self._c_comma_delimitted(ele, self.fields['elts'].value)
+        parent.appendChild(ele)
+
+
+    @expr_wrapper
+    def c_List(self, parent):
+        ele = Element('List')
+        ele.setAttribute('ctx', self.fields['ctx'].value.class_)
+        assert self.tokens.pop().exact_type == Token.LSQB
+        ele.appendChild(DOM.Text('[' + self.tokens.space_right()))
+        self._c_comma_delimitted(ele, self.fields['elts'].value)
+
+        # close text
+        assert self.tokens.pop().exact_type == Token.RSQB
+        if self.fields['elts'].value:
+            close_text = self.tokens.prev_space() + ']'
+        else:
+            close_text = ']'
+        ele.appendChild(DOM.Text(close_text))
+
         parent.appendChild(ele)
 
 
@@ -182,7 +201,7 @@ class AstNodeX(AstNode):
             ele.appendChild(ele_args)
 
         assert self.tokens.pop().exact_type == Token.RPAR
-        ele.appendChild(DOM.Text(self.tokens.text_prev2next()))
+        ele.appendChild(DOM.Text(self.tokens.prev_space() + ')'))
         parent.appendChild(ele)
 
 
@@ -417,10 +436,14 @@ class SrcToken:
         Token.INDENT, Token.DEDENT,
         ])
     def write_non_ast_tokens(self, parent_ele):
+        token = None
+        text = ''
         while self.next().exact_type in self.NON_AST_TOKENS:
-            self.pop()
-            parent_ele.appendChild(DOM.Text(self.text_prev2next()))
-
+            token = self.pop()
+            text += self.prev_space() + token.string
+        if token:
+            text += self.space_right()
+        parent_ele.appendChild(DOM.Text(text))
 
 
 def py2xml(filename):
