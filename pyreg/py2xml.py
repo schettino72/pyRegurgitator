@@ -86,6 +86,13 @@ class AstNodeX(AstNode):
         return _build_expr
 
 
+    def _c_delimiter(self, ele, delimiters):
+        while self.tokens.next().exact_type in delimiters:
+            token = self.tokens.pop()
+            text = self.tokens.prev_space() + token.string
+            ele.appendChild(DOM.Text(text))
+
+
     def _c_comma_delimitted(self, ele, items):
         """convert a COMMA separated list of items
 
@@ -94,11 +101,7 @@ class AstNodeX(AstNode):
             if index:
                 ele.appendChild(DOM.Text(self.tokens.space_right()))
             item.to_xml(ele)
-            while self.tokens.next().exact_type in (Token.COMMA, Token.NL):
-                token = self.tokens.pop()
-                text = self.tokens.prev_space() + token.string
-                ele.appendChild(DOM.Text(text))
-
+            self._c_delimiter(ele, (Token.COMMA, Token.NL))
 
 
     @expr_wrapper
@@ -152,12 +155,67 @@ class AstNodeX(AstNode):
 
 
     @expr_wrapper
+    def c_Dict(self, parent):
+        ele = Element('Dict')
+        parent.appendChild(ele)
+
+        assert self.tokens.pop().exact_type == Token.LBRACE
+        ele.appendChild(DOM.Text('{' + self.tokens.space_right()))
+        for key, value in zip(self.fields['keys'].value,
+                              self.fields['values'].value):
+            ele.appendChild(DOM.Text(self.tokens.space_right()))
+            item_ele = Element('item')
+            ele.appendChild(item_ele)
+
+            key.to_xml(item_ele)
+            self._c_delimiter(item_ele, (Token.COLON, Token.NL))
+            item_ele.appendChild(DOM.Text(self.tokens.space_right()))
+            value.to_xml(item_ele)
+            # optional comma
+            self._c_delimiter(ele, (Token.COMMA, Token.NL))
+
+        # close text
+        assert self.tokens.pop().exact_type == Token.RBRACE
+        if self.fields['keys'].value:
+            close_text = self.tokens.prev_space() + '}'
+        else:
+            close_text = '}'
+        ele.appendChild(DOM.Text(close_text))
+
+
+
+    @expr_wrapper
     def c_Name(self, parent):
         assert self.tokens.pop().type == Token.NAME
         ele = Element('Name', text=self.fields['id'].value)
         ele.setAttribute('name', self.fields['id'].value)
         ele.setAttribute('ctx', self.fields['ctx'].value.class_)
         parent.appendChild(ele)
+
+
+    @expr_wrapper
+    def c_NameConstant(self, parent):
+        assert self.tokens.pop().type == Token.NAME
+        ele = Element('NameConstant', text=self.tokens.current.string)
+        parent.appendChild(ele)
+
+
+    @expr_wrapper
+    def c_Attribute(self, parent):
+        attribute_ele = Element('Attribute')
+        attribute_ele.setAttribute('ctx', self.fields['ctx'].value.class_)
+        # value
+        value_ele = Element('value')
+        self.fields['value'].value.to_xml(value_ele)
+        attribute_ele.appendChild(value_ele)
+        # dot
+        assert self.tokens.pop().exact_type == Token.DOT
+        attribute_ele.appendChild(DOM.Text('.'))
+        # attr name
+        assert self.tokens.pop().type == Token.NAME
+        attr_ele = Element('attr', text=self.tokens.current.string)
+        attribute_ele.appendChild(attr_ele)
+        parent.appendChild(attribute_ele)
 
 
     TOKEN_MAP = {
@@ -229,6 +287,27 @@ class AstNodeX(AstNode):
         parent.appendChild(Element('Pass', text='pass'))
         assert self.tokens.pop().string == 'pass'
 
+
+    def c_Assert(self, parent):
+        self.tokens.write_non_ast_tokens(parent)
+        assert self.tokens.pop().string == 'assert'
+        assert_text = 'assert' + self.tokens.space_right()
+        assert_ele = Element('Assert', text=assert_text)
+        # test expr
+        test_ele = Element('test')
+        self.fields['test'].value.to_xml(test_ele)
+        assert_ele.appendChild(test_ele)
+        # msg
+        msg = self.fields['msg'].value
+        if msg:
+            assert self.tokens.pop().exact_type == Token.COMMA
+            assert_ele.appendChild(DOM.Text(self.tokens.text_prev2next()))
+            msg_ele = Element('msg')
+            msg.to_xml(msg_ele)
+            assert_ele.appendChild(msg_ele)
+        parent.appendChild(assert_ele)
+
+
     def c_Assign(self, parent):
         self.tokens.write_non_ast_tokens(parent)
         ele = Element('Assign')
@@ -249,7 +328,7 @@ class AstNodeX(AstNode):
             alias = Element('alias', text=self.tokens.space_right())
 
             # add name
-            name = self.tokens.pop_dotted_name()
+            self.tokens.pop_dotted_name()
             name_ele = Element('name', text=child.fields['name'].value)
             alias.appendChild(name_ele)
 

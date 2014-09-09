@@ -103,6 +103,32 @@ class TestList:
             ',\n  <Num>2</Num>,\n ]</List></Expr>'
 
 
+class TestDict:
+    def test_dict(self, s2xml):
+        assert s2xml('{"a": 2}') == \
+            '<Expr><Dict>{'\
+            '<item><Str><s>"a"</s></Str>: <Num>2</Num></item>}</Dict></Expr>'
+
+
+class TestName:
+    def test_name(self, s2xml):
+        assert s2xml('foo') == \
+            '<Expr><Name ctx="Load" name="foo">foo</Name></Expr>'
+
+class TestNameConstant:
+    def test_name(self, s2xml):
+        assert s2xml('None') == \
+            '<Expr><NameConstant>None</NameConstant></Expr>'
+
+
+class TestAtrribute:
+    def test_attr(self, s2xml):
+        assert s2xml('foo.bar') == \
+            '<Expr><Attribute ctx="Load">'\
+            '<value><Name ctx="Load" name="foo">foo</Name></value>'\
+            '.<attr>bar</attr></Attribute></Expr>'
+
+
 class TestBinOp:
     def test_binop_add(self, s2xml):
         assert s2xml('1 + 2') == \
@@ -255,6 +281,16 @@ class TestReturn:
             '<body>\n    <Return>return <Num>4</Num></Return>'\
             '</body></FunctionDef>'
 
+
+class TestAssert:
+    def test_assert(self, s2xml):
+        assert s2xml('assert 1') == \
+            '<Assert>assert <test><Num>1</Num></test></Assert>'
+
+    def test_assert_msg(self, s2xml):
+        assert s2xml('assert 1, "opa"') == \
+            '<Assert>assert <test><Num>1</Num></test>'\
+            ', <msg><Str><s>"opa"</s></Str></msg></Assert>'
 
 
 class TestAssign:
