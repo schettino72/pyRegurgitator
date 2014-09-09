@@ -207,6 +207,14 @@ class TestCall:
             '<Expr><Call><func><Name ctx="Load" name="foo">foo</Name></func>'\
             '()</Call></Expr> #'
 
+    def test_call_keyword(self, s2xml):
+        assert s2xml('foo(x=2)') == \
+            '<Expr><Call><func><Name ctx="Load" name="foo">foo</Name></func>'\
+            '(<keywords><keyword><arg>x</arg>=<value><Num>2</Num></value>'\
+            '</keyword></keywords>)'\
+            '</Call></Expr>'
+
+
 
 class TestFuncDef:
     def test_funcdef(self, s2xml):
@@ -376,6 +384,19 @@ class TestImportFrom:
             '<ImportFrom level="2">from ..<module/> import<names>'\
             '<alias> <name>bar</name></alias>'\
             '</names></ImportFrom>'
+
+
+class TestWhile:
+    def test_while(self, s2xml):
+        assert s2xml('while True:\n    pass') == \
+            '<While>while <test><NameConstant>True</NameConstant></test>:'\
+            '<body>\n    <Pass>pass</Pass></body></While>'
+
+class TestIf:
+    def test_if(self, s2xml):
+        assert s2xml('if True:\n    pass') == \
+            '<If>if <test><NameConstant>True</NameConstant></test>:'\
+            '<body>\n    <Pass>pass</Pass></body></If>'
 
 
 def test_xml2py():

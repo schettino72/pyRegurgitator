@@ -258,6 +258,27 @@ class AstNodeX(AstNode):
             self._c_comma_delimitted(ele_args, args)
             ele.appendChild(ele_args)
 
+        keywords = self.fields['keywords'].value
+        if keywords:
+            ele_keywords = Element('keywords')
+            ele.appendChild(ele_keywords)
+            for keyword in keywords:
+                ele_keyword = Element('keyword')
+                ele_keywords.appendChild(ele_keyword)
+                # arg
+                assert self.tokens.pop().type == Token.NAME
+                ele_arg = Element('arg', text=keyword.fields['arg'].value)
+                ele_keyword.appendChild(ele_arg)
+                # equal
+                assert self.tokens.pop().exact_type == Token.EQUAL
+                ele_keyword.appendChild(DOM.Text(self.tokens.text_prev2next()))
+                # value
+                ele_val = Element('value')
+                keyword.fields['value'].value.to_xml(ele_val)
+                ele_keyword.appendChild(ele_val)
+                # optional comma
+                self._c_delimiter(ele_keywords, (Token.COMMA, Token.NL))
+
         assert self.tokens.pop().exact_type == Token.RPAR
         ele.appendChild(DOM.Text(self.tokens.prev_space() + ')'))
         parent.appendChild(ele)
@@ -284,8 +305,11 @@ class AstNodeX(AstNode):
 
     def c_Pass(self, parent):
         self.tokens.write_non_ast_tokens(parent)
-        parent.appendChild(Element('Pass', text='pass'))
-        assert self.tokens.pop().string == 'pass'
+        assert self.tokens.pop().type == Token.NAME
+        parent.appendChild(Element(self.class_,
+                                   text=self.tokens.current.string))
+    c_Break = c_Pass
+    c_Continue = c_Pass
 
 
     def c_Assert(self, parent):
@@ -486,6 +510,24 @@ class AstNodeX(AstNode):
         # body
         self._c_field_list(ele, 'body')
         parent.appendChild(ele)
+
+    def c_While(self, parent):
+        self.tokens.write_non_ast_tokens(parent)
+        assert self.tokens.pop().type == Token.NAME
+        while_text = self.tokens.current.string + self.tokens.space_right()
+        ele = Element(self.class_, text=while_text)
+        # test expr
+        test_ele = Element('test')
+        self.fields['test'].value.to_xml(test_ele)
+        ele.appendChild(test_ele)
+        # colon
+        assert self.tokens.pop().exact_type == Token.COLON
+        ele.appendChild(DOM.Text(self.tokens.prev_space() + ':'))
+        # body
+        self._c_field_list(ele, 'body')
+        parent.appendChild(ele)
+
+    c_If = c_While
 
 
 
