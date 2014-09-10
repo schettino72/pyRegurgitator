@@ -86,6 +86,25 @@ class AstNodeX(AstNode):
         return _build_expr
 
 
+    def pop_merge_NL(self, rspace=False):
+        """pop one token and sorounding NL tokens
+
+        :return: text of NL's and token
+        """
+        text = ''
+        found_token = False
+        while True:
+            next_token = self.tokens.next()
+            if next_token.exact_type != Token.NL:
+                if found_token:
+                    break
+                found_token = True
+            text += self.tokens.space_right() + self.tokens.pop().string
+            print(repr(text), self.tokens.current)
+        if rspace:
+            text += self.tokens.space_right()
+        return text
+
     def _c_delimiter(self, ele, delimiters):
         while self.tokens.next().exact_type in delimiters:
             token = self.tokens.pop()
@@ -168,8 +187,7 @@ class AstNodeX(AstNode):
             ele.appendChild(item_ele)
 
             key.to_xml(item_ele)
-            self._c_delimiter(item_ele, (Token.COLON, Token.NL))
-            item_ele.appendChild(DOM.Text(self.tokens.space_right()))
+            item_ele.appendChild(DOM.Text(self.pop_merge_NL(rspace=True)))
             value.to_xml(item_ele)
             # optional comma
             self._c_delimiter(ele, (Token.COMMA, Token.NL))
@@ -218,22 +236,13 @@ class AstNodeX(AstNode):
         parent.appendChild(attribute_ele)
 
 
-    TOKEN_MAP = {
-        'Add': Token.PLUS,
-        'Mult': Token.STAR,
-        'Sub': Token.MINUS,
-        'Mod': Token.PERCENT,
-        }
-
     @expr_wrapper
     def c_BinOp(self, parent):
         ele = Element(self.class_)
         self.fields['left'].value.to_xml(ele)
         # operator
         op = self.fields['op'].value
-        op_token = self.TOKEN_MAP[op.class_]
-        assert self.tokens.pop().exact_type == op_token, self.tokens.current
-        op_text = self.tokens.text_prev2next()
+        op_text = self.pop_merge_NL(rspace=True)
         ele.appendChild(Element(op.class_, text=op_text))
         # right value
         self.fields['right'].value.to_xml(ele)
@@ -264,6 +273,19 @@ class AstNodeX(AstNode):
         parent.appendChild(ele)
 
 
+    CMP_TOKEN_COUNT = {
+        'Lt': 1, # <
+        'Eq': 1, # ==
+        'Gt': 1, # >
+        'GtE': 1, # >=
+        'In': 1, # in
+        'Is': 1, # is
+        'IsNot': 2, # is not
+        'Lt': 1, # <
+        'LtE': 1, # <=
+        'NotEq': 1, # !=
+        'NotIn': 2, # not in
+        }
     @expr_wrapper
     def c_Compare(self, parent):
         ele = Element(self.class_)
@@ -274,8 +296,11 @@ class AstNodeX(AstNode):
 
         for op, value in zip(self.fields['ops'].value,
                              self.fields['comparators'].value):
-            assert self.tokens.pop().type == Token.OP
-            ele_op = Element('cmpop', text=self.tokens.text_prev2next())
+            cmp_text = self.tokens.space_right()
+            for token in range(self.CMP_TOKEN_COUNT[op.class_]):
+                cmp_text += self.tokens.pop().string
+                cmp_text += self.tokens.space_right()
+            ele_op = Element('cmpop', text=cmp_text)
             ele.appendChild(ele_op)
             # value
             ele_value = Element('value')

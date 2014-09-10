@@ -150,6 +150,16 @@ class TestBinOp:
         assert s2xml('''5 + \\\n  9''') == \
             '<Expr><BinOp><Num>5</Num><Add> + \\\n  </Add><Num>9</Num></BinOp></Expr>'
 
+    def test_binop_multiline(self, s2xml):
+        assert s2xml('''(1 +\n 1)''') == \
+            '<Expr>(<BinOp><Num>1</Num><Add> +\n </Add>'\
+            '<Num>1</Num></BinOp>)</Expr>'
+
+    def test_binop_multiline_xtreme(self, s2xml):
+        assert s2xml('''(1 \n\n+\n\n 1)''') == \
+            '<Expr>(<BinOp><Num>1</Num><Add> \n\n+\n\n </Add>'\
+            '<Num>1</Num></BinOp>)</Expr>'
+
     def test_expr_in_parenthesis_any(self, s2xml):
         assert s2xml('( 2+ (3 )  )') == \
             '<Expr>( <BinOp><Num>2</Num><Add>+ </Add>(<Num>3</Num>'\
@@ -185,6 +195,14 @@ class TestCompare:
             '<Expr><Compare>'\
             '<value><Num>1</Num></value>'\
             '<cmpop> &lt; </cmpop>'\
+            '<value><Num>2</Num></value>'\
+            '</Compare></Expr>'
+
+    def test_compare_2_token_cmp(self, s2xml):
+        assert s2xml('1 is  not 2') == \
+            '<Expr><Compare>'\
+            '<value><Num>1</Num></value>'\
+            '<cmpop> is  not </cmpop>'\
             '<value><Num>2</Num></value>'\
             '</Compare></Expr>'
 
