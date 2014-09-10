@@ -156,6 +156,37 @@ class TestBinOp:
             ' )</BinOp>  )</Expr>'
 
 
+class TestBoolOp:
+    def test_bool_op(self, s2xml):
+        assert s2xml('1 and 2') == \
+            '<Expr><BoolOp op="And">'\
+            '<value><Num>1</Num></value> and '\
+            '<value><Num>2</Num></value>'\
+            '</BoolOp></Expr>'
+
+    def test_bool_op_more_than_2(self, s2xml):
+        assert s2xml('1 or 2 or 3') == \
+            '<Expr><BoolOp op="Or">'\
+            '<value><Num>1</Num></value> or '\
+            '<value><Num>2</Num></value> or '\
+            '<value><Num>3</Num></value>'\
+            '</BoolOp></Expr>'
+
+class TestUnaryOp:
+    def test_bool_op(self, s2xml):
+        assert s2xml('not 2') == \
+            '<Expr><UnaryOp op="Not">'\
+            'not <Num>2</Num>'\
+            '</UnaryOp></Expr>'
+
+class TestCompare:
+    def test_compare(self, s2xml):
+        assert s2xml('1 < 2') == \
+            '<Expr><Compare>'\
+            '<value><Num>1</Num></value>'\
+            '<cmpop> &lt; </cmpop>'\
+            '<value><Num>2</Num></value>'\
+            '</Compare></Expr>'
 
 
 class TestMultiline:
@@ -397,6 +428,12 @@ class TestIf:
         assert s2xml('if True:\n    pass') == \
             '<If>if <test><NameConstant>True</NameConstant></test>:'\
             '<body>\n    <Pass>pass</Pass></body></If>'
+
+
+class TestRaise:
+    def test_raise(self, s2xml):
+        assert s2xml('raise 2') == \
+            '<Raise>raise <exc><Num>2</Num></exc></Raise>'
 
 
 def test_xml2py():

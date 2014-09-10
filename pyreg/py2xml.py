@@ -222,6 +222,7 @@ class AstNodeX(AstNode):
         'Add': Token.PLUS,
         'Mult': Token.STAR,
         'Sub': Token.MINUS,
+        'Mod': Token.PERCENT,
         }
 
     @expr_wrapper
@@ -231,11 +232,55 @@ class AstNodeX(AstNode):
         # operator
         op = self.fields['op'].value
         op_token = self.TOKEN_MAP[op.class_]
-        assert self.tokens.pop().exact_type == op_token
+        assert self.tokens.pop().exact_type == op_token, self.tokens.current
         op_text = self.tokens.text_prev2next()
         ele.appendChild(Element(op.class_, text=op_text))
         # right value
         self.fields['right'].value.to_xml(ele)
+        parent.appendChild(ele)
+
+    @expr_wrapper
+    def c_BoolOp(self, parent):
+        ele = Element(self.class_)
+        ele.setAttribute('op', self.fields['op'].value.class_)
+
+        for index, value in enumerate(self.fields['values'].value):
+            if index:
+                # prepend operator text to all values but first one
+                assert self.tokens.pop().type == Token.NAME
+                ele.appendChild(DOM.Text(self.tokens.text_prev2next()))
+            ele_value = Element('value')
+            value.to_xml(ele_value)
+            ele.appendChild(ele_value)
+        parent.appendChild(ele)
+
+    @expr_wrapper
+    def c_UnaryOp(self, parent):
+        self.tokens.pop().type == Token.NAME
+        op_text = self.tokens.current.string + self.tokens.space_right()
+        ele = Element(self.class_, text=op_text)
+        ele.setAttribute('op', self.fields['op'].value.class_)
+        self.fields['operand'].value.to_xml(ele)
+        parent.appendChild(ele)
+
+
+    @expr_wrapper
+    def c_Compare(self, parent):
+        ele = Element(self.class_)
+
+        ele_left = Element('value')
+        self.fields['left'].value.to_xml(ele_left)
+        ele.appendChild(ele_left)
+
+        for op, value in zip(self.fields['ops'].value,
+                             self.fields['comparators'].value):
+            assert self.tokens.pop().type == Token.OP
+            ele_op = Element('cmpop', text=self.tokens.text_prev2next())
+            ele.appendChild(ele_op)
+            # value
+            ele_value = Element('value')
+            value.to_xml(ele_value)
+            ele.appendChild(ele_value)
         parent.appendChild(ele)
 
 
@@ -528,6 +573,17 @@ class AstNodeX(AstNode):
         parent.appendChild(ele)
 
     c_If = c_While
+
+
+    def c_Raise(self, parent):
+        self.tokens.write_non_ast_tokens(parent)
+        assert self.tokens.pop().string == 'raise'
+        ele = Element('Raise', text='raise')
+        ele.appendChild(DOM.Text(self.tokens.space_right()))
+        ele_exc = Element('exc')
+        self.fields['exc'].value.to_xml(ele_exc)
+        ele.appendChild(ele_exc)
+        parent.appendChild(ele)
 
 
 
