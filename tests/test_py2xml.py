@@ -51,6 +51,12 @@ line 2""" '''
         assert s2xml(string) == "<Expr><Str><s>'part 1'</s>  \\\n"\
             " <s>' /part 2'</s></Str></Expr>"
 
+    def test_str_expr_concat(self, s2xml):
+        string = """('part 1'\n ' /part 2')"""
+        assert s2xml(string) == \
+            "<Expr>(<Str><s>'part 1'</s>\n"\
+            " <s>' /part 2'</s></Str>)</Expr>"
+
 
 class TestTuple:
     def test_tuple(self, s2xml):
@@ -115,6 +121,7 @@ class TestName:
         assert s2xml('foo') == \
             '<Expr><Name ctx="Load" name="foo">foo</Name></Expr>'
 
+
 class TestNameConstant:
     def test_name(self, s2xml):
         assert s2xml('None') == \
@@ -127,6 +134,15 @@ class TestAtrribute:
             '<Expr><Attribute ctx="Load">'\
             '<value><Name ctx="Load" name="foo">foo</Name></value>'\
             '.<attr>bar</attr></Attribute></Expr>'
+
+
+class TestSubscript:
+    def test_index(self, s2xml):
+        assert s2xml('foo[2]') == \
+            '<Expr><Subscript ctx="Load">'\
+            '<value><Name ctx="Load" name="foo">foo</Name></value>'\
+            '<slice>[<Num>2</Num>]</slice>'\
+            '</Subscript></Expr>'
 
 
 class TestBinOp:
@@ -181,6 +197,15 @@ class TestBoolOp:
             '<value><Num>2</Num></value> or '\
             '<value><Num>3</Num></value>'\
             '</BoolOp></Expr>'
+
+    def test_bool_op_multiline(self, s2xml):
+        assert s2xml('(1 and\n 2)') == \
+            '<Expr>(<BoolOp op="And">'\
+            '<value><Num>1</Num></value> and\n '\
+            '<value><Num>2</Num></value>'\
+            '</BoolOp>)</Expr>'
+
+
 
 class TestUnaryOp:
     def test_bool_op(self, s2xml):
@@ -263,12 +288,25 @@ class TestCall:
             '</keyword></keywords>)'\
             '</Call></Expr>'
 
+    def test_call_starargs(self, s2xml):
+        assert s2xml('foo(*a)') == \
+            '<Expr><Call><func><Name ctx="Load" name="foo">foo</Name></func>'\
+            '(<starargs>*<Name ctx="Load" name="a">a</Name></starargs>)'\
+            '</Call></Expr>'
 
 
 class TestFuncDef:
     def test_funcdef(self, s2xml):
         assert s2xml('def four (  ):\n    4') == \
             '<FunctionDef name="four">def four<arguments> (  ):</arguments>'\
+            '<body>\n    <Expr><Num>4</Num></Expr></body></FunctionDef>'
+
+    def test_funcdef_decorator(self, s2xml):
+        assert s2xml('@foodeco\ndef four (  ):\n    4') == \
+            '<FunctionDef name="four">'\
+            '<decorators><decorator>@<Name ctx="Load" name="foodeco">'\
+            'foodeco</Name></decorator></decorators>'\
+            '\ndef four<arguments> (  ):</arguments>'\
             '<body>\n    <Expr><Num>4</Num></Expr></body></FunctionDef>'
 
     def test_funcdef_arg(self, s2xml):
@@ -306,14 +344,20 @@ class TestFuncDef:
 
     def test_funcdef_comment(self, s2xml):
         assert s2xml('def foo():\n    # comment\n    pass') == \
-            '<FunctionDef name="foo">def foo''<arguments>():</arguments>'\
+            '<FunctionDef name="foo">def foo<arguments>():</arguments>'\
             '<body>\n    # comment\n    <Pass>pass</Pass></body></FunctionDef>'
 
     def test_funcdef_after(self, s2xml):
         assert s2xml('def foo():\n    pass\n8') == \
-            '<FunctionDef name="foo">def foo''<arguments>():</arguments>'\
+            '<FunctionDef name="foo">def foo<arguments>():</arguments>'\
             '<body>\n    <Pass>pass</Pass></body></FunctionDef>\n'\
             '<Expr><Num>8</Num></Expr>'
+
+    def test_funcdef_vararg(self, s2xml):
+        assert s2xml('def foo(*pos):\n    pass') == \
+            '<FunctionDef name="foo">def foo<arguments>('\
+            '<vararg>*<arg name="pos">pos</arg></vararg>):</arguments>'\
+            '<body>\n    <Pass>pass</Pass></body></FunctionDef>'
 
 
 class TestClassDef:
@@ -447,6 +491,25 @@ class TestIf:
             '<If>if <test><NameConstant>True</NameConstant></test>:'\
             '<body>\n    <Pass>pass</Pass></body></If>'
 
+    def test_else(self, s2xml):
+        assert s2xml('if True:\n    pass\nelse:\n    pass') == \
+            '<If>if <test><NameConstant>True</NameConstant></test>:'\
+            '<body>\n    <Pass>pass</Pass></body>'\
+            '\nelse:<orelse>\n    <Pass>pass</Pass></orelse></If>'
+
+    def test_elif(self, s2xml):
+        assert s2xml('if True:\n    pass\nelif True:\n    pass') == \
+            '<If>if <test><NameConstant>True</NameConstant></test>:'\
+            '<body>\n    <Pass>pass</Pass></body>\n'\
+            '<orelse><If>elif <test><NameConstant>True</NameConstant></test>'\
+            ':<body>\n    <Pass>pass</Pass></body></If></orelse></If>'
+
+class TestFor:
+    def test_for(self, s2xml):
+        assert s2xml('for a in b:\n    pass') == \
+            '<For>for <target><Name ctx="Store" name="a">a</Name></target>'\
+            'in <iter><Name ctx="Load" name="b">b</Name></iter>:'\
+            '<body>\n    <Pass>pass</Pass></body></For>'
 
 class TestRaise:
     def test_raise(self, s2xml):
