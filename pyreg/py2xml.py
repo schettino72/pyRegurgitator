@@ -86,20 +86,25 @@ class AstNodeX(AstNode):
         return _build_expr
 
 
-    def pop_merge_NL(self, rspace=False):
+    def pop_merge_NL(self, lspace=False, rspace=True):
         """pop one token and sorounding NL tokens
 
         :return: text of NL's and token
         """
         text = ''
         found_token = False
+        include_left = lspace
         while True:
             next_token = self.tokens.next()
             if next_token.exact_type != Token.NL:
                 if found_token:
                     break
                 found_token = True
-            text += self.tokens.space_right() + self.tokens.pop().string
+            self.tokens.pop()
+            if include_left:
+                text += self.tokens.prev_space()
+            text += next_token.string
+            include_left = True
         if rspace:
             text += self.tokens.space_right()
         return text
@@ -141,7 +146,6 @@ class AstNodeX(AstNode):
             continue_string = True
             while True:
                 token = self.tokens.list[pos]
-                print(token)
                 if token.type == Token.STRING:
                     break
                 elif token.exact_type == Token.NL:
@@ -175,8 +179,7 @@ class AstNodeX(AstNode):
     def c_List(self, parent):
         ele = Element('List')
         ele.setAttribute('ctx', self.fields['ctx'].value.class_)
-        assert self.tokens.pop().exact_type == Token.LSQB
-        ele.appendChild(DOM.Text('[' + self.tokens.space_right()))
+        ele.appendChild(DOM.Text(self.pop_merge_NL())) #LSQB
         self._c_comma_delimitted(ele, self.fields['elts'].value)
 
         # close text
@@ -195,16 +198,15 @@ class AstNodeX(AstNode):
         ele = Element('Dict')
         parent.appendChild(ele)
 
-        assert self.tokens.pop().exact_type == Token.LBRACE
-        ele.appendChild(DOM.Text('{' + self.tokens.space_right()))
+        ele.appendChild(DOM.Text(self.pop_merge_NL())) # LBRACE
         for key, value in zip(self.fields['keys'].value,
                               self.fields['values'].value):
-            ele.appendChild(DOM.Text(self.tokens.space_right()))
             item_ele = Element('item')
             ele.appendChild(item_ele)
 
             key.to_xml(item_ele)
-            item_ele.appendChild(DOM.Text(self.pop_merge_NL(rspace=True)))
+            # COLON
+            item_ele.appendChild(DOM.Text(self.pop_merge_NL()))
             value.to_xml(item_ele)
             # optional comma
             self._c_delimiter(ele, (Token.COMMA, Token.NL))
@@ -255,11 +257,48 @@ class AstNodeX(AstNode):
 
     @expr_wrapper
     def c_Index(self, parent):
-        self.fields['value'].value.to_xml(parent)
+        ele = Element('Index')
+        self.fields['value'].value.to_xml(ele)
+        parent.appendChild(ele)
+
+    def c_Slice(self, parent):
+        ele = Element('Slice')
+        parent.appendChild(ele)
+
+        # lower
+        lower = self.fields['lower'].value
+        if lower:
+            ele_lower = Element('lower')
+            lower.to_xml(ele_lower)
+            ele.appendChild(ele_lower)
+            ele.appendChild(DOM.Text(self.tokens.space_right()))
+
+        # first colon
+        assert self.tokens.pop().exact_type == Token.COLON
+        ele.appendChild(DOM.Text(':'))
+
+        # upper
+        upper = self.fields['upper'].value
+        if upper:
+            ele.appendChild(DOM.Text(self.tokens.space_right()))
+            ele_upper = Element('upper')
+            upper.to_xml(ele_upper)
+            ele.appendChild(ele_upper)
+
+        # step
+        step = self.fields['step'].value
+        if step:
+            assert self.tokens.pop().exact_type == Token.COLON
+            ele.appendChild(DOM.Text(self.tokens.text_prev2next()))
+            ele_step = Element('step')
+            step.to_xml(ele_step)
+            ele.appendChild(ele_step)
+
+
     def c_ExtSlice(self, parent):
         raise NotImplementedError()
-    def c_Slice(self, parent):
-        raise NotImplementedError()
+
+
 
     @expr_wrapper
     def c_Subscript(self, parent):
@@ -288,7 +327,7 @@ class AstNodeX(AstNode):
         self.fields['left'].value.to_xml(ele)
         # operator
         op = self.fields['op'].value
-        op_text = self.pop_merge_NL(rspace=True)
+        op_text = self.pop_merge_NL(lspace=True) # OP
         ele.appendChild(Element(op.class_, text=op_text))
         # right value
         self.fields['right'].value.to_xml(ele)
@@ -302,7 +341,7 @@ class AstNodeX(AstNode):
         for index, value in enumerate(self.fields['values'].value):
             if index:
                 # prepend operator text to all values but first one
-                op_text = self.pop_merge_NL(rspace=True)
+                op_text = self.pop_merge_NL(lspace=True)
                 ele.appendChild(DOM.Text(op_text))
             ele_value = Element('value')
             value.to_xml(ele_value)
@@ -311,7 +350,7 @@ class AstNodeX(AstNode):
 
     @expr_wrapper
     def c_UnaryOp(self, parent):
-        self.tokens.pop().type == Token.NAME
+        self.tokens.pop() # operator can be an OP or NAME
         op_text = self.tokens.current.string + self.tokens.space_right()
         ele = Element(self.class_, text=op_text)
         ele.setAttribute('op', self.fields['op'].value.class_)
@@ -364,9 +403,7 @@ class AstNodeX(AstNode):
         self.fields['func'].value.to_xml(ele_func)
         ele.appendChild(ele_func)
 
-        assert self.tokens.pop().exact_type == Token.LPAR
-        ele.appendChild(DOM.Text(self.tokens.text_prev2next()))
-
+        ele.appendChild(DOM.Text(self.pop_merge_NL(lspace=True))) # LPAR
         # args
         args = self.fields['args'].value
         if args:
@@ -395,19 +432,50 @@ class AstNodeX(AstNode):
                 # optional comma
                 self._c_delimiter(ele_keywords, (Token.COMMA, Token.NL))
 
-        starargs = self.fields['starargs'].value
-        if starargs:
-            assert self.tokens.pop().exact_type == Token.STAR
-            ele_star = Element('starargs', text=self.tokens.text_prev2next())
-            starargs.to_xml(ele_star)
-            ele.appendChild(ele_star)
-
-        if self.fields['kwargs'].value:
-            raise NotImplementedError()
+        for field in ('starargs', 'kwargs'):
+            xargs = self.fields[field].value
+            if xargs:
+                token = self.tokens.pop()
+                assert token.type == Token.OP # START DOUBLESTAR
+                ele_xargs = Element(field, text=self.tokens.text_prev2next())
+                xargs.to_xml(ele_xargs)
+                ele.appendChild(ele_xargs)
+                # optional comma
+                self._c_delimiter(ele, (Token.COMMA, Token.NL))
 
         assert self.tokens.pop().exact_type == Token.RPAR, self.tokens.current
         ele.appendChild(DOM.Text(self.tokens.prev_space() + ')'))
         parent.appendChild(ele)
+
+
+    @expr_wrapper
+    def c_IfExp(self, parent):
+        ele = Element('IfExpr')
+        parent.appendChild(ele)
+
+        # body
+        ele_body = Element('body')
+        self.fields['body'].value.to_xml(ele_body)
+        ele.appendChild(ele_body)
+
+        # if
+        assert self.tokens.pop().string == 'if'
+        ele.appendChild(DOM.Text(self.tokens.text_prev2next()))
+
+        # test
+        ele_test = Element('test')
+        self.fields['test'].value.to_xml(ele_test)
+        ele.appendChild(ele_test)
+
+        # else
+        assert self.tokens.pop().string == 'else'
+        ele.appendChild(DOM.Text(self.tokens.text_prev2next()))
+
+        # orelse
+        ele_orelse = Element('orelse')
+        self.fields['orelse'].value.to_xml(ele_orelse)
+        ele.appendChild(ele_orelse)
+
 
 
     def c_DictComp(self, parent):
@@ -416,8 +484,7 @@ class AstNodeX(AstNode):
         raise NotImplementedError()
     def c_GeneratorExp(self, parent):
         raise NotImplementedError()
-    def c_IfExp(self, parent):
-        raise NotImplementedError()
+
     def c_Lambda(self, parent):
         raise NotImplementedError()
     def c_ListComp(self, parent):
@@ -639,17 +706,21 @@ class AstNodeX(AstNode):
                 self._c_delimiter(args_ele, (Token.COMMA, Token.NL))
             arguments_ele.appendChild(args_ele)
 
-        # vararg
-        vararg = arguments.fields['vararg'].value
-        if vararg:
-            ele_vararg = Element('vararg')
-            assert self.tokens.pop().exact_type == Token.STAR
-            ele_vararg.appendChild(DOM.Text(self.tokens.prev_space() + '*'))
-            assert self.tokens.pop().type == Token.NAME
-            ele_vararg.appendChild(DOM.Text(self.tokens.prev_space()))
-            ele_vararg.appendChild(self._arg_element(vararg))
-            arguments_ele.appendChild(ele_vararg)
-            self._c_delimiter(arguments_ele, (Token.COMMA, Token.NL))
+        # vararg, kwarg
+        for field in ('vararg', 'kwarg'):
+            arg = arguments.fields[field].value
+            if arg:
+                ele_arg = Element(field)
+                token = self.tokens.pop()
+                assert token.type == Token.OP # START / DOUBLESTAR
+                star_text = self.tokens.prev_space() + token.string
+                ele_arg.appendChild(DOM.Text(star_text))
+                assert self.tokens.pop().type == Token.NAME
+                ele_arg.appendChild(DOM.Text(self.tokens.prev_space()))
+                ele_arg.appendChild(self._arg_element(arg))
+                arguments_ele.appendChild(ele_arg)
+                self._c_delimiter(arguments_ele, (Token.COMMA, Token.NL))
+
 
         if arguments.fields['kwonlyargs'].value:
             raise NotImplementedError()
@@ -657,8 +728,6 @@ class AstNodeX(AstNode):
         if arguments.fields['kw_defaults'].value:
             raise NotImplementedError()
 
-        if arguments.fields['kwarg'].value:
-            raise NotImplementedError()
 
 
         # close parent + colon
@@ -765,7 +834,7 @@ class AstNodeX(AstNode):
         ele.appendChild(ele_target)
         # 'in'
         assert self.tokens.pop().string == 'in'
-        in_text = self.tokens.current.string + self.tokens.space_right()
+        in_text = self.tokens.text_prev2next()
         ele.appendChild(DOM.Text(in_text))
         # iter
         ele_iter = Element('iter')
@@ -793,9 +862,12 @@ class AstNodeX(AstNode):
         assert self.tokens.pop().string == 'raise'
         ele = Element('Raise', text='raise')
         ele.appendChild(DOM.Text(self.tokens.space_right()))
-        ele_exc = Element('exc')
-        self.fields['exc'].value.to_xml(ele_exc)
-        ele.appendChild(ele_exc)
+        # exc
+        exc = self.fields['exc'].value
+        if exc:
+            ele_exc = Element('exc')
+            exc.to_xml(ele_exc)
+            ele.appendChild(ele_exc)
 
         if self.fields['cause'].value:
             raise NotImplementedError()

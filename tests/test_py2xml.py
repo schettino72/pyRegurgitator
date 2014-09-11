@@ -117,10 +117,10 @@ class TestList:
             '<Expr><List ctx="Load">[ <Num>1</Num>'\
             ',\n  <Num>2</Num>,\n ]</List></Expr>'
 
-    # def test_list_multiline2(self, s2xml):
-    #     assert s2xml('[\n 1,\n  2,\n ]') == \
-    #         '<Expr><List ctx="Load">[\n <Num>1</Num>'\
-    #         ',\n  <Num>2</Num>,\n ]</List></Expr>'
+    def test_list_multiline2(self, s2xml):
+        assert s2xml('[\n 1,\n  2,\n ]') == \
+            '<Expr><List ctx="Load">[\n <Num>1</Num>'\
+            ',\n  <Num>2</Num>,\n ]</List></Expr>'
 
 
 class TestDict:
@@ -128,6 +128,13 @@ class TestDict:
         assert s2xml('{"a": 2}') == \
             '<Expr><Dict>{'\
             '<item><Str><s>"a"</s></Str>: <Num>2</Num></item>}</Dict></Expr>'
+
+    def test_dict_multiline(self, s2xml):
+        assert s2xml('{\n\n  "a": 2,\n"b":3\n}') == \
+            '<Expr><Dict>{\n\n  '\
+            '<item><Str><s>"a"</s></Str>: <Num>2</Num></item>'\
+            ',\n<item><Str><s>"b"</s></Str>:<Num>3</Num></item>'\
+            '\n}</Dict></Expr>'
 
 
 class TestName:
@@ -162,7 +169,28 @@ class TestSubscript:
         assert s2xml('foo[2]') == \
             '<Expr><Subscript ctx="Load">'\
             '<value><Name ctx="Load" name="foo">foo</Name></value>'\
-            '<slice>[<Num>2</Num>]</slice>'\
+            '<slice>[<Index><Num>2</Num></Index>]</slice>'\
+            '</Subscript></Expr>'
+
+    def test_slice_lower(self, s2xml):
+        assert s2xml('foo[1 : ]') == \
+            '<Expr><Subscript ctx="Load">'\
+            '<value><Name ctx="Load" name="foo">foo</Name></value>'\
+            '<slice>[<Slice><lower><Num>1</Num></lower> :</Slice> ]</slice>'\
+            '</Subscript></Expr>'
+
+    def test_slice_upper(self, s2xml):
+        assert s2xml('foo[ : 3 ]') == \
+            '<Expr><Subscript ctx="Load">'\
+            '<value><Name ctx="Load" name="foo">foo</Name></value>'\
+            '<slice>[ <Slice>: <upper><Num>3</Num></upper></Slice> ]</slice>'\
+            '</Subscript></Expr>'
+
+    def test_slice_step(self, s2xml):
+        assert s2xml('foo[: : 3 ]') == \
+            '<Expr><Subscript ctx="Load">'\
+            '<value><Name ctx="Load" name="foo">foo</Name></value>'\
+            '<slice>[<Slice>: : <step><Num>3</Num></step></Slice> ]</slice>'\
             '</Subscript></Expr>'
 
 
@@ -280,6 +308,14 @@ class TestCompare:
             '<value><Num>3</Num></value>'\
             '</Compare></Expr>'
 
+class TestIfExp:
+    def test_ifexp(self, s2xml):
+        assert s2xml('1 if True else 0') == \
+            '<Expr><IfExpr><body><Num>1</Num></body>'\
+            ' if <test><NameConstant>True</NameConstant></test>'\
+            ' else <orelse><Num>0</Num></orelse>'\
+            '</IfExpr></Expr>'
+
 
 class TestMultiline:
     def test_2_lines(self, s2xml):
@@ -315,8 +351,16 @@ class TestCall:
 
     def test_call_arg_spaces(self, s2xml):
         assert s2xml('print (  2   )') == \
-            '<Expr><Call><func><Name ctx="Load" name="print">print</Name></func>'\
+            '<Expr><Call>'\
+            '<func><Name ctx="Load" name="print">print</Name></func>'\
             ' (  <args><Num>2</Num></args>   )'\
+            '</Call></Expr>'
+
+    def test_call_multiline(self, s2xml):
+        assert s2xml('print ( \n  2\n\n   )') == \
+            '<Expr><Call>'\
+            '<func><Name ctx="Load" name="print">print</Name></func>'\
+            ' ( \n  <args><Num>2</Num>\n\n</args>   )'\
             '</Call></Expr>'
 
     def test_call_arg2(self, s2xml):
@@ -341,6 +385,12 @@ class TestCall:
         assert s2xml('foo(*a)') == \
             '<Expr><Call><func><Name ctx="Load" name="foo">foo</Name></func>'\
             '(<starargs>*<Name ctx="Load" name="a">a</Name></starargs>)'\
+            '</Call></Expr>'
+
+    def test_call_kwargs(self, s2xml):
+        assert s2xml('foo(**a)') == \
+            '<Expr><Call><func><Name ctx="Load" name="foo">foo</Name></func>'\
+            '(<kwargs>**<Name ctx="Load" name="a">a</Name></kwargs>)'\
             '</Call></Expr>'
 
 
@@ -406,6 +456,13 @@ class TestFuncDef:
         assert s2xml('def foo(*pos):\n    pass') == \
             '<FunctionDef name="foo">def foo<arguments>('\
             '<vararg>*<arg name="pos">pos</arg></vararg>):</arguments>'\
+            '<body>\n    <Pass>pass</Pass></body></FunctionDef>'
+
+
+    def test_funcdef_kwarg(self, s2xml):
+        assert s2xml('def foo(**bar):\n    pass') == \
+            '<FunctionDef name="foo">def foo<arguments>('\
+            '<kwarg>**<arg name="bar">bar</arg></kwarg>):</arguments>'\
             '<body>\n    <Pass>pass</Pass></body></FunctionDef>'
 
 
@@ -599,19 +656,23 @@ class TestFor:
     def test_for(self, s2xml):
         assert s2xml('for a in b:\n    pass') == \
             '<For>for <target><Name ctx="Store" name="a">a</Name></target>'\
-            'in <iter><Name ctx="Load" name="b">b</Name></iter>:'\
+            ' in <iter><Name ctx="Load" name="b">b</Name></iter>:'\
             '<body>\n    <Pass>pass</Pass></body></For>'
 
     def test_for_else(self, s2xml):
         assert s2xml('for a in b:\n    pass\nelse:\n    pass') == \
             '<For>for <target><Name ctx="Store" name="a">a</Name></target>'\
-            'in <iter><Name ctx="Load" name="b">b</Name></iter>:'\
+            ' in <iter><Name ctx="Load" name="b">b</Name></iter>:'\
             '<body>\n    <Pass>pass</Pass></body>'\
             '\n<orelse>else:\n    <Pass>pass</Pass></orelse>'\
             '</For>'
 
 class TestRaise:
     def test_raise(self, s2xml):
+        assert s2xml('raise') == \
+            '<Raise>raise</Raise>'
+
+    def test_raise_exc(self, s2xml):
         assert s2xml('raise 2') == \
             '<Raise>raise <exc><Num>2</Num></exc></Raise>'
 
