@@ -132,7 +132,7 @@ class AstNodeX(AstNode):
         ele = Element('Str')
         token = self.tokens.pop()
         while True:
-            assert token.type == Token.STRING
+            assert token.type == Token.STRING, self.tokens.current
             ele_s = Element('s', text=token.string)
             ele.appendChild(ele_s)
 
@@ -409,9 +409,9 @@ class AstNodeX(AstNode):
     # stmt
     ###########################################################
 
-    def _c_field_list(self, parent, field_name):
+    def _c_field_list(self, parent, field_name, text=None):
         """must a field list that contains line, number information"""
-        ele = Element(field_name)
+        ele = Element(field_name, text=text)
         for item in self.fields[field_name].value:
             item.to_xml(ele)
         parent.appendChild(ele)
@@ -690,8 +690,7 @@ class AstNodeX(AstNode):
                 assert self.tokens.pop().string == 'else', self.tokens.current
                 else_text = self.tokens.text_prev2next() + ':'
                 assert self.tokens.pop().exact_type == Token.COLON
-                ele.appendChild(DOM.Text(else_text))
-                self._c_field_list(ele, 'orelse')
+                self._c_field_list(ele, 'orelse', text=else_text)
 
         parent.appendChild(ele)
 
@@ -732,6 +731,73 @@ class AstNodeX(AstNode):
         self.fields['exc'].value.to_xml(ele_exc)
         ele.appendChild(ele_exc)
         parent.appendChild(ele)
+
+
+    def c_ExceptHandler(self, parent):
+        ele = Element('ExceptHandler')
+        parent.appendChild(ele)
+        # except
+        self.tokens.write_non_ast_tokens(ele)
+        assert self.tokens.pop().string == 'except'
+        except_text = 'except' + self.tokens.space_right()
+        ele.appendChild(DOM.Text(except_text))
+        # type
+        except_type = self.fields['type'].value
+        if except_type:
+            ele_type = Element('type')
+            except_type.to_xml(ele_type)
+            ele.appendChild(ele_type)
+            # name
+            name = self.fields['name'].value
+            if name:
+                assert self.tokens.pop().string == 'as'
+                ele.appendChild(DOM.Text(self.tokens.text_prev2next()))
+                assert self.tokens.pop().type == Token.NAME
+                ele_name = Element('name', text=name)
+                ele.appendChild(ele_name)
+        # :
+        assert self.tokens.pop().exact_type == Token.COLON
+        colon_text = self.tokens.prev_space() + ':'
+        ele.appendChild(DOM.Text(colon_text))
+        # body
+        self._c_field_list(ele, 'body')
+
+
+    def c_Try(self, parent):
+        self.tokens.write_non_ast_tokens(parent)
+        ele = Element('Try')
+        parent.appendChild(ele)
+        assert self.tokens.pop().string == 'try'
+        try_text = 'try' + self.tokens.space_right() + ':'
+        ele.appendChild(DOM.Text(try_text))
+        assert self.tokens.pop().exact_type == Token.COLON
+
+        # body
+        self._c_field_list(ele, 'body')
+
+        # handlers
+        handlers = self.fields['handlers'].value
+        if handlers:
+            ele_handlers = Element('handlers')
+            ele.appendChild(ele_handlers)
+            for handler in handlers:
+                handler.to_xml(ele_handlers)
+
+        orelse = self.fields['orelse'].value
+        if orelse:
+            self.tokens.write_non_ast_tokens(ele)
+            assert self.tokens.pop().string == 'else', self.tokens.current
+            else_text = self.tokens.text_prev2next() + ':'
+            assert self.tokens.pop().exact_type == Token.COLON
+            self._c_field_list(ele, 'orelse', text=else_text)
+
+        final = self.fields['finalbody'].value
+        if final:
+            self.tokens.write_non_ast_tokens(ele)
+            assert self.tokens.pop().string == 'finally', self.tokens.current
+            final_text = self.tokens.text_prev2next() + ':'
+            assert self.tokens.pop().exact_type == Token.COLON
+            self._c_field_list(ele, 'finalbody', text=final_text)
 
 
 

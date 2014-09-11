@@ -495,7 +495,7 @@ class TestIf:
         assert s2xml('if True:\n    pass\nelse:\n    pass') == \
             '<If>if <test><NameConstant>True</NameConstant></test>:'\
             '<body>\n    <Pass>pass</Pass></body>'\
-            '\nelse:<orelse>\n    <Pass>pass</Pass></orelse></If>'
+            '\n<orelse>else:\n    <Pass>pass</Pass></orelse></If>'
 
     def test_elif(self, s2xml):
         assert s2xml('if True:\n    pass\nelif True:\n    pass') == \
@@ -515,6 +515,46 @@ class TestRaise:
     def test_raise(self, s2xml):
         assert s2xml('raise 2') == \
             '<Raise>raise <exc><Num>2</Num></exc></Raise>'
+
+class TestTry:
+    def test_try(self, s2xml):
+        assert s2xml('try:\n    4\nexcept:\n    pass') == \
+            '<Try>try:<body>\n    <Expr><Num>4</Num></Expr></body>'\
+            '<handlers><ExceptHandler>\nexcept:'\
+            '<body>\n    <Pass>pass</Pass></body></ExceptHandler>'\
+            '</handlers></Try>'
+
+    def test_try_except(self, s2xml):
+        assert s2xml('try:\n    4\nexcept Exception:\n    pass') == \
+            '<Try>try:<body>\n    <Expr><Num>4</Num></Expr></body>'\
+            '<handlers><ExceptHandler>\nexcept '\
+            '<type><Name ctx="Load" name="Exception">Exception</Name></type>'\
+            ':<body>\n    <Pass>pass</Pass></body></ExceptHandler>'\
+            '</handlers></Try>'
+
+    def test_try_except_as(self, s2xml):
+        assert s2xml('try:\n    4\nexcept Exception as foo:\n    pass') == \
+            '<Try>try:<body>\n    <Expr><Num>4</Num></Expr></body>'\
+            '<handlers><ExceptHandler>\nexcept '\
+            '<type><Name ctx="Load" name="Exception">Exception</Name></type>'\
+            ' as <name>foo</name>:'\
+            '<body>\n    <Pass>pass</Pass></body></ExceptHandler>'\
+            '</handlers></Try>'
+
+
+    def test_try_except_else(self, s2xml):
+        code = 'try:\n    4\nexcept Exception:\n    pass\nelse:\n    pass'
+        assert s2xml(code) == \
+            '<Try>try:<body>\n    <Expr><Num>4</Num></Expr></body>'\
+            '<handlers><ExceptHandler>\nexcept '\
+            '<type><Name ctx="Load" name="Exception">Exception</Name></type>'\
+            ':<body>\n    <Pass>pass</Pass></body></ExceptHandler>'\
+            '</handlers>\n<orelse>else:\n    <Pass>pass</Pass></orelse></Try>'
+
+    def test_try_finally(self, s2xml):
+        assert s2xml('try:\n    4\nfinally:\n    pass') == \
+            '<Try>try:<body>\n    <Expr><Num>4</Num></Expr></body>'\
+            '\n<finalbody>finally:\n    <Pass>pass</Pass></finalbody></Try>'
 
 
 def test_xml2py():
