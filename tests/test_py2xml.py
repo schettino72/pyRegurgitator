@@ -86,9 +86,14 @@ class TestExpressions:
         assert s2xml('(3 )') == '<Expr>(<Num>3</Num> )</Expr>'
 
     def test_tuple_in_parenthesis(self, s2xml):
+        assert s2xml('( 3 , 4  )') == \
+            '<Expr>( <Tuple ctx="Load"><Num>3</Num> , <Num>4</Num>'\
+            '</Tuple>  )</Expr>'
+
+    def test_tuple_in_parenthesis_comma(self, s2xml):
         assert s2xml('( 3 , 4 , )') == \
             '<Expr>( <Tuple ctx="Load"><Num>3</Num> , <Num>4</Num>'\
-            ' , </Tuple>)</Expr>'
+            ' ,</Tuple> )</Expr>'
 
     def test_expr_in_parenthesis2(self, s2xml):
         assert s2xml('(  3 )') == '<Expr>(  <Num>3</Num> )</Expr>'
@@ -141,7 +146,7 @@ class TestDict:
             '<Expr><Dict>{\n\n  '\
             '<item><Str><s>"a"</s></Str>: <Num>2</Num></item>'\
             ',\n<item><Str><s>"b"</s></Str> :<Num>3</Num></item>'\
-            '\n, \n}</Dict></Expr>'
+            ' \n, \n}</Dict></Expr>'
 
 
 class TestName:

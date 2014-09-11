@@ -81,10 +81,7 @@ class AstNodeX(AstNode):
             if has_PAR:
                 token = self.tokens.pop()
                 assert token.exact_type == Token.RPAR
-                if self.tokens.previous.type != Token.OP:
-                    text = self.tokens.prev_space() + ')'
-                else:
-                    text = ')'
+                text = self.tokens.prev_space() + ')'
                 parent.appendChild(DOM.Text(text))
         return _build_expr
 
@@ -171,9 +168,14 @@ class AstNodeX(AstNode):
     def c_Tuple(self, parent):
         ele = Element('Tuple')
         ele.setAttribute('ctx', self.fields['ctx'].value.class_)
+        first = True
         for item in self.fields['elts'].value:
+            if not first:
+                ele.appendChild(DOM.Text(self.tokens.space_right()))
+            first = False
             item.to_xml(ele)
-            text = self.pop_merge_NL(lspace=True, exact_type=Token.COMMA)
+            text = self.pop_merge_NL(lspace=True, exact_type=Token.COMMA,
+                                     rspace=False)
             ele.appendChild(DOM.Text(text))
 
         parent.appendChild(ele)
