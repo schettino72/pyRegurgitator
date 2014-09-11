@@ -88,7 +88,7 @@ class TestExpressions:
     def test_tuple_in_parenthesis(self, s2xml):
         assert s2xml('( 3 , 4 , )') == \
             '<Expr>( <Tuple ctx="Load"><Num>3</Num> , <Num>4</Num>'\
-            ' ,</Tuple> )</Expr>'
+            ' , </Tuple>)</Expr>'
 
     def test_expr_in_parenthesis2(self, s2xml):
         assert s2xml('(  3 )') == '<Expr>(  <Num>3</Num> )</Expr>'
@@ -130,11 +130,18 @@ class TestDict:
             '<item><Str><s>"a"</s></Str>: <Num>2</Num></item>}</Dict></Expr>'
 
     def test_dict_multiline(self, s2xml):
-        assert s2xml('{\n\n  "a": 2,\n"b":3\n}') == \
+        assert s2xml('{\n\n  "a": 2,\n"b" :3\n}') == \
             '<Expr><Dict>{\n\n  '\
             '<item><Str><s>"a"</s></Str>: <Num>2</Num></item>'\
-            ',\n<item><Str><s>"b"</s></Str>:<Num>3</Num></item>'\
+            ',\n<item><Str><s>"b"</s></Str> :<Num>3</Num></item>'\
             '\n}</Dict></Expr>'
+
+    def test_dict_multiline_comma(self, s2xml):
+        assert s2xml('{\n\n  "a": 2,\n"b" :3 \n, \n}') == \
+            '<Expr><Dict>{\n\n  '\
+            '<item><Str><s>"a"</s></Str>: <Num>2</Num></item>'\
+            ',\n<item><Str><s>"b"</s></Str> :<Num>3</Num></item>'\
+            '\n, \n}</Dict></Expr>'
 
 
 class TestName:
@@ -171,6 +178,13 @@ class TestSubscript:
             '<value><Name ctx="Load" name="foo">foo</Name></value>'\
             '<slice>[<Index><Num>2</Num></Index>]</slice>'\
             '</Subscript></Expr>'
+
+    def test_subscript_space_after(self, s2xml):
+        assert s2xml('foo[2] #') == \
+            '<Expr><Subscript ctx="Load">'\
+            '<value><Name ctx="Load" name="foo">foo</Name></value>'\
+            '<slice>[<Index><Num>2</Num></Index>]</slice>'\
+            '</Subscript></Expr> #'
 
     def test_slice_lower(self, s2xml):
         assert s2xml('foo[1 : ]') == \
@@ -353,20 +367,20 @@ class TestCall:
         assert s2xml('print (  2   )') == \
             '<Expr><Call>'\
             '<func><Name ctx="Load" name="print">print</Name></func>'\
-            ' (  <args><Num>2</Num></args>   )'\
+            ' (  <args><Num>2</Num>   </args>)'\
             '</Call></Expr>'
 
     def test_call_multiline(self, s2xml):
         assert s2xml('print ( \n  2\n\n   )') == \
             '<Expr><Call>'\
             '<func><Name ctx="Load" name="print">print</Name></func>'\
-            ' ( \n  <args><Num>2</Num>\n\n</args>   )'\
+            ' ( \n  <args><Num>2</Num>\n\n   </args>)'\
             '</Call></Expr>'
 
     def test_call_arg2(self, s2xml):
         assert s2xml('print(2,  "xxx" )') == \
             '<Expr><Call><func><Name ctx="Load" name="print">print</Name></func>'\
-            '(<args><Num>2</Num>,  <Str><s>"xxx"</s></Str></args> )'\
+            '(<args><Num>2</Num>,  <Str><s>"xxx"</s></Str> </args>)'\
             '</Call></Expr>'
 
     def test_call_comment(self, s2xml):
@@ -375,16 +389,24 @@ class TestCall:
             '()</Call></Expr> #'
 
     def test_call_keyword(self, s2xml):
-        assert s2xml('foo(x=2)') == \
+        assert s2xml('foo( x = 2 )') == \
             '<Expr><Call><func><Name ctx="Load" name="foo">foo</Name></func>'\
-            '(<keywords><keyword><arg>x</arg>=<value><Num>2</Num></value>'\
+            '( <keywords><keyword><arg>x</arg> = <value><Num>2</Num></value>'\
+            '</keyword> </keywords>)'\
+            '</Call></Expr>'
+
+    def test_call_arg_keyword(self, s2xml):
+        assert s2xml('foo(1, x=2)') == \
+            '<Expr><Call><func><Name ctx="Load" name="foo">foo</Name></func>'\
+            '(<args><Num>1</Num>, </args>'\
+            '<keywords><keyword><arg>x</arg>=<value><Num>2</Num></value>'\
             '</keyword></keywords>)'\
             '</Call></Expr>'
 
     def test_call_starargs(self, s2xml):
-        assert s2xml('foo(*a)') == \
+        assert s2xml('foo( *a)') == \
             '<Expr><Call><func><Name ctx="Load" name="foo">foo</Name></func>'\
-            '(<starargs>*<Name ctx="Load" name="a">a</Name></starargs>)'\
+            '( <starargs>*<Name ctx="Load" name="a">a</Name></starargs>)'\
             '</Call></Expr>'
 
     def test_call_kwargs(self, s2xml):
@@ -411,7 +433,7 @@ class TestFuncDef:
     def test_funcdef_arg(self, s2xml):
         assert s2xml('def p_four  ( ini ):\n    return ini + 4') == \
             '<FunctionDef name="p_four">def p_four'\
-            '<arguments>  (<args> <arg name="ini">ini</arg></args> ):</arguments>'\
+            '<arguments>  ( <args><arg name="ini">ini</arg> </args>):</arguments>'\
             '<body>\n    <Return>return <BinOp>'\
             '<Name ctx="Load" name="ini">ini</Name><Add> + </Add>'\
             '<Num>4</Num></BinOp></Return>'\

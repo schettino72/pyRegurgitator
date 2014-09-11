@@ -81,14 +81,18 @@ class AstNodeX(AstNode):
             if has_PAR:
                 token = self.tokens.pop()
                 assert token.exact_type == Token.RPAR
-                text = self.tokens.prev_space() + ')'
+                if self.tokens.previous.type != Token.OP:
+                    text = self.tokens.prev_space() + ')'
+                else:
+                    text = ')'
                 parent.appendChild(DOM.Text(text))
         return _build_expr
 
 
-    def pop_merge_NL(self, lspace=False, rspace=True):
+    def pop_merge_NL(self, lspace=False, rspace=True, exact_type=None):
         """pop one token and sorounding NL tokens
 
+        :exact_type (str): only match given token
         :return: text of NL's and token
         """
         text = ''
@@ -99,6 +103,9 @@ class AstNodeX(AstNode):
             if next_token.exact_type != Token.NL:
                 if found_token:
                     break
+                elif exact_type and exact_type != next_token.exact_type:
+                    # FIXME deal with new line before figure out not a match
+                    return ''
                 found_token = True
             self.tokens.pop()
             if include_left:
@@ -110,21 +117,14 @@ class AstNodeX(AstNode):
         return text
 
     def _c_delimiter(self, ele, delimiters):
+        """include space right"""
+        text = ''
         while self.tokens.next().exact_type in delimiters:
             token = self.tokens.pop()
-            text = self.tokens.prev_space() + token.string
-            ele.appendChild(DOM.Text(text))
+            text += self.tokens.prev_space() + token.string
+        text += self.tokens.space_right()
+        ele.appendChild(DOM.Text(text))
 
-
-    def _c_comma_delimitted(self, ele, items):
-        """convert a COMMA separated list of items
-
-        with optional end in COMMA"""
-        for index, item in enumerate(items):
-            if index:
-                ele.appendChild(DOM.Text(self.tokens.space_right()))
-            item.to_xml(ele)
-            self._c_delimiter(ele, (Token.COMMA, Token.NL))
 
 
     @expr_wrapper
@@ -171,7 +171,11 @@ class AstNodeX(AstNode):
     def c_Tuple(self, parent):
         ele = Element('Tuple')
         ele.setAttribute('ctx', self.fields['ctx'].value.class_)
-        self._c_comma_delimitted(ele, self.fields['elts'].value)
+        for item in self.fields['elts'].value:
+            item.to_xml(ele)
+            text = self.pop_merge_NL(lspace=True, exact_type=Token.COMMA)
+            ele.appendChild(DOM.Text(text))
+
         parent.appendChild(ele)
 
 
@@ -180,15 +184,13 @@ class AstNodeX(AstNode):
         ele = Element('List')
         ele.setAttribute('ctx', self.fields['ctx'].value.class_)
         ele.appendChild(DOM.Text(self.pop_merge_NL())) #LSQB
-        self._c_comma_delimitted(ele, self.fields['elts'].value)
+        for item in self.fields['elts'].value:
+            item.to_xml(ele)
+            self._c_delimiter(ele, (Token.COMMA, Token.NL))
 
-        # close text
+        # close brackets
         assert self.tokens.pop().exact_type == Token.RSQB
-        if self.fields['elts'].value:
-            close_text = self.tokens.prev_space() + ']'
-        else:
-            close_text = ']'
-        ele.appendChild(DOM.Text(close_text))
+        ele.appendChild(DOM.Text(']'))
 
         parent.appendChild(ele)
 
@@ -206,17 +208,14 @@ class AstNodeX(AstNode):
 
             key.to_xml(item_ele)
             # COLON
-            item_ele.appendChild(DOM.Text(self.pop_merge_NL()))
+            item_ele.appendChild(DOM.Text(self.pop_merge_NL(lspace=True)))
             value.to_xml(item_ele)
             # optional comma
             self._c_delimiter(ele, (Token.COMMA, Token.NL))
 
         # close text
         assert self.tokens.pop().exact_type == Token.RBRACE
-        if self.fields['keys'].value:
-            close_text = self.tokens.prev_space() + '}'
-        else:
-            close_text = '}'
+        close_text = '}'
         ele.appendChild(DOM.Text(close_text))
 
 
@@ -317,7 +316,8 @@ class AstNodeX(AstNode):
         ele_slice.appendChild(DOM.Text(self.tokens.text_prev2next()))
         self.fields['slice'].value.to_xml(ele_slice)
         assert self.tokens.pop().exact_type == Token.RSQB
-        ele_slice.appendChild(DOM.Text(self.tokens.text_prev2next()))
+        close_text = self.tokens.prev_space() + ']'
+        ele_slice.appendChild(DOM.Text(close_text))
         sub_ele.appendChild(ele_slice)
 
 
@@ -408,8 +408,11 @@ class AstNodeX(AstNode):
         args = self.fields['args'].value
         if args:
             ele_args = Element('args')
-            self._c_comma_delimitted(ele_args, args)
             ele.appendChild(ele_args)
+            for arg in args:
+                arg.to_xml(ele_args)
+                # optional comma
+                self._c_delimiter(ele_args, (Token.COMMA, Token.NL))
 
         keywords = self.fields['keywords'].value
         if keywords:
@@ -437,14 +440,15 @@ class AstNodeX(AstNode):
             if xargs:
                 token = self.tokens.pop()
                 assert token.type == Token.OP # START DOUBLESTAR
-                ele_xargs = Element(field, text=self.tokens.text_prev2next())
+                text = token.string + self.tokens.space_right()
+                ele_xargs = Element(field, text=text)
                 xargs.to_xml(ele_xargs)
                 ele.appendChild(ele_xargs)
                 # optional comma
                 self._c_delimiter(ele, (Token.COMMA, Token.NL))
 
         assert self.tokens.pop().exact_type == Token.RPAR, self.tokens.current
-        ele.appendChild(DOM.Text(self.tokens.prev_space() + ')'))
+        ele.appendChild(DOM.Text(')'))
         parent.appendChild(ele)
 
 
@@ -680,8 +684,7 @@ class AstNodeX(AstNode):
 
         # arguments
         arguments = self.fields['args'].value
-        assert self.tokens.pop().exact_type == Token.LPAR
-        start_arguments_text = self.tokens.prev_space() + '('
+        start_arguments_text = self.pop_merge_NL(lspace=True) # LPAR
         arguments_ele = Element('arguments', text=start_arguments_text)
 
         args = arguments.fields['args'].value
@@ -692,7 +695,6 @@ class AstNodeX(AstNode):
             args_ele = Element('args')
             for arg, default in zip(args, defaults):
                 assert self.tokens.pop().type == Token.NAME
-                args_ele.appendChild(DOM.Text(self.tokens.prev_space()))
                 arg_ele = self._arg_element(arg)
                 if default:
                     assert self.tokens.pop().exact_type == Token.EQUAL
@@ -713,7 +715,7 @@ class AstNodeX(AstNode):
                 ele_arg = Element(field)
                 token = self.tokens.pop()
                 assert token.type == Token.OP # START / DOUBLESTAR
-                star_text = self.tokens.prev_space() + token.string
+                star_text = token.string
                 ele_arg.appendChild(DOM.Text(star_text))
                 assert self.tokens.pop().type == Token.NAME
                 ele_arg.appendChild(DOM.Text(self.tokens.prev_space()))
@@ -732,7 +734,7 @@ class AstNodeX(AstNode):
 
         # close parent + colon
         assert self.tokens.pop().exact_type == Token.RPAR
-        close_args_text = self.tokens.prev_space() + ')'
+        close_args_text = ')'
         assert self.tokens.pop().exact_type == Token.COLON
         close_args_text += self.tokens.prev_space() + ':'
         arguments_ele.appendChild(DOM.Text(close_args_text))
@@ -766,7 +768,9 @@ class AstNodeX(AstNode):
         bases = self.fields['bases'].value
         if bases:
             bases_ele = Element('bases')
-            self._c_comma_delimitted(bases_ele, bases)
+            for item in bases:
+                item.to_xml(bases_ele)
+                self._c_delimiter(bases_ele, (Token.COMMA, Token.NL))
             arguments_ele.appendChild(bases_ele)
 
 
