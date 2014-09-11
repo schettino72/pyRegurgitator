@@ -57,6 +57,15 @@ line 2""" '''
             "<Expr>(<Str><s>'part 1'</s>\n"\
             " <s>' /part 2'</s></Str>)</Expr>"
 
+    def test_bytes(self, s2xml):
+        assert s2xml("b'as'") == "<Expr><Bytes><s>b'as'</s></Bytes></Expr>"
+
+    def test_bytes_implicit_concat(self, s2xml):
+        string = "b'part 1' b' /part 2'"
+        assert s2xml(string) == \
+            "<Expr><Bytes><s>b'part 1'</s> <s>b' /part 2'</s></Bytes></Expr>"
+
+
 
 class TestTuple:
     def test_tuple(self, s2xml):
@@ -108,6 +117,11 @@ class TestList:
             '<Expr><List ctx="Load">[ <Num>1</Num>'\
             ',\n  <Num>2</Num>,\n ]</List></Expr>'
 
+    # def test_list_multiline2(self, s2xml):
+    #     assert s2xml('[\n 1,\n  2,\n ]') == \
+    #         '<Expr><List ctx="Load">[\n <Num>1</Num>'\
+    #         ',\n  <Num>2</Num>,\n ]</List></Expr>'
+
 
 class TestDict:
     def test_dict(self, s2xml):
@@ -134,6 +148,13 @@ class TestAtrribute:
             '<Expr><Attribute ctx="Load">'\
             '<value><Name ctx="Load" name="foo">foo</Name></value>'\
             '.<attr>bar</attr></Attribute></Expr>'
+
+    def test_attr2(self, s2xml):
+        assert s2xml('foo.bar.baz') == \
+            '<Expr><Attribute ctx="Load"><value>'\
+            '<Attribute ctx="Load"><value><Name ctx="Load" name="foo">'\
+            'foo</Name></value>.<attr>bar</attr></Attribute></value>'\
+            '.<attr>baz</attr></Attribute></Expr>'
 
 
 class TestSubscript:
@@ -208,10 +229,28 @@ class TestBoolOp:
 
 
 class TestUnaryOp:
-    def test_bool_op(self, s2xml):
+    def test_unary_not(self, s2xml):
         assert s2xml('not 2') == \
             '<Expr><UnaryOp op="Not">'\
             'not <Num>2</Num>'\
+            '</UnaryOp></Expr>'
+
+    def test_unary_invert(self, s2xml):
+        assert s2xml('~ 2') == \
+            '<Expr><UnaryOp op="Invert">'\
+            '~ <Num>2</Num>'\
+            '</UnaryOp></Expr>'
+
+    def test_unary_add(self, s2xml):
+        assert s2xml('+ 2') == \
+            '<Expr><UnaryOp op="UAdd">'\
+            '+ <Num>2</Num>'\
+            '</UnaryOp></Expr>'
+
+    def test_unary_sub(self, s2xml):
+        assert s2xml('- 2') == \
+            '<Expr><UnaryOp op="USub">'\
+            '- <Num>2</Num>'\
             '</UnaryOp></Expr>'
 
 class TestCompare:
@@ -229,6 +268,16 @@ class TestCompare:
             '<value><Num>1</Num></value>'\
             '<cmpop> is  not </cmpop>'\
             '<value><Num>2</Num></value>'\
+            '</Compare></Expr>'
+
+    def test_compare_multi(self, s2xml):
+        assert s2xml('1 < 2 <= 3') == \
+            '<Expr><Compare>'\
+            '<value><Num>1</Num></value>'\
+            '<cmpop> &lt; </cmpop>'\
+            '<value><Num>2</Num></value>'\
+            '<cmpop> &lt;= </cmpop>'\
+            '<value><Num>3</Num></value>'\
             '</Compare></Expr>'
 
 
@@ -382,6 +431,12 @@ class TestReturn:
             '<body>\n    <Return>return <Num>4</Num></Return>'\
             '</body></FunctionDef>'
 
+    def test_return_nothing(self, s2xml):
+        assert s2xml('def foo (  ):\n    return') == \
+            '<FunctionDef name="foo">def foo<arguments> (  ):</arguments>'\
+            '<body>\n    <Return>return</Return>'\
+            '</body></FunctionDef>'
+
 
 class TestAssert:
     def test_assert(self, s2xml):
@@ -398,26 +453,42 @@ class TestAssign:
     def test_assign(self, s2xml):
         assert s2xml('d = 5') == \
             '<Assign><targets><Name ctx="Store" name="d">d</Name>'\
-            '</targets> = <Num>5</Num></Assign>'
+            ' = </targets><Num>5</Num></Assign>'
 
     def test_comment_assign(self, s2xml):
         assert s2xml('# hello\nd = 5') == \
             '# hello\n<Assign><targets><Name ctx="Store" name="d">d</Name>'\
-            '</targets> = <Num>5</Num></Assign>'
+            ' = </targets><Num>5</Num></Assign>'
 
     def test_assign_space(self, s2xml):
         assert s2xml('f  =   7') == \
-            '<Assign><targets><Name ctx="Store" name="f">f</Name></targets>'\
-            '  =   <Num>7</Num></Assign>'
+            '<Assign><targets>'\
+            '<Name ctx="Store" name="f">f</Name>  =   </targets>'\
+            '<Num>7</Num></Assign>'
 
     def test_expr_semi_colon_separated2(self, s2xml):
         assert s2xml('x=3; y=5') == \
             '<Assign>'\
-            '<targets><Name ctx="Store" name="x">x</Name></targets>'\
-            '=<Num>3</Num></Assign>'\
+            '<targets><Name ctx="Store" name="x">x</Name>=</targets>'\
+            '<Num>3</Num></Assign>'\
             '; <Assign>'\
-            '<targets><Name ctx="Store" name="y">y</Name></targets>'\
-            '=<Num>5</Num></Assign>'
+            '<targets><Name ctx="Store" name="y">y</Name>=</targets>'\
+            '<Num>5</Num></Assign>'
+
+    def test_assign_tuple(self, s2xml):
+        assert s2xml('d, e = 5, 6') == \
+            '<Assign><targets><Tuple ctx="Store">'\
+            '<Name ctx="Store" name="d">d</Name>'\
+            ', <Name ctx="Store" name="e">e</Name></Tuple> = </targets>'\
+            '<Tuple ctx="Load"><Num>5</Num>, <Num>6</Num>'\
+            '</Tuple></Assign>'
+
+    def test_assign_multi(self, s2xml):
+        assert s2xml('d = e = 5') == \
+            '<Assign><targets>'\
+            '<Name ctx="Store" name="d">d</Name> = '\
+            '<Name ctx="Store" name="e">e</Name> = </targets>'\
+            '<Num>5</Num></Assign>'
 
 
 class TestImport:
@@ -485,6 +556,26 @@ class TestWhile:
             '<While>while <test><NameConstant>True</NameConstant></test>:'\
             '<body>\n    <Pass>pass</Pass></body></While>'
 
+    def test_while_else(self, s2xml):
+        assert s2xml('while True:\n    pass\nelse:\n    pass') == \
+            '<While>while <test><NameConstant>True</NameConstant></test>:'\
+            '<body>\n    <Pass>pass</Pass></body>'\
+            '\n<orelse>else:\n    <Pass>pass</Pass></orelse>'\
+            '</While>'
+
+class TestBreak:
+    def test_break(self, s2xml):
+        assert s2xml('while True:\n    break') == \
+            '<While>while <test><NameConstant>True</NameConstant></test>:'\
+            '<body>\n    <Break>break</Break></body></While>'
+
+class TestContinue:
+    def test_continue(self, s2xml):
+        assert s2xml('while True:\n    continue') == \
+            '<While>while <test><NameConstant>True</NameConstant></test>:'\
+            '<body>\n    <Continue>continue</Continue></body></While>'
+
+
 class TestIf:
     def test_if(self, s2xml):
         assert s2xml('if True:\n    pass') == \
@@ -510,6 +601,14 @@ class TestFor:
             '<For>for <target><Name ctx="Store" name="a">a</Name></target>'\
             'in <iter><Name ctx="Load" name="b">b</Name></iter>:'\
             '<body>\n    <Pass>pass</Pass></body></For>'
+
+    def test_for_else(self, s2xml):
+        assert s2xml('for a in b:\n    pass\nelse:\n    pass') == \
+            '<For>for <target><Name ctx="Store" name="a">a</Name></target>'\
+            'in <iter><Name ctx="Load" name="b">b</Name></iter>:'\
+            '<body>\n    <Pass>pass</Pass></body>'\
+            '\n<orelse>else:\n    <Pass>pass</Pass></orelse>'\
+            '</For>'
 
 class TestRaise:
     def test_raise(self, s2xml):

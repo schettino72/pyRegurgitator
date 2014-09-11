@@ -129,7 +129,7 @@ class AstNodeX(AstNode):
 
     @expr_wrapper
     def c_Str(self, parent):
-        ele = Element('Str')
+        ele = Element(self.class_)
         token = self.tokens.pop()
         while True:
             assert token.type == Token.STRING, self.tokens.current
@@ -159,6 +159,8 @@ class AstNodeX(AstNode):
             token = self.tokens.pop()
             ele.appendChild(DOM.Text(text + self.tokens.prev_space()))
         parent.appendChild(ele)
+
+    c_Bytes = c_Str
 
 
     @expr_wrapper
@@ -254,6 +256,10 @@ class AstNodeX(AstNode):
     @expr_wrapper
     def c_Index(self, parent):
         self.fields['value'].value.to_xml(parent)
+    def c_ExtSlice(self, parent):
+        raise NotImplementedError()
+    def c_Slice(self, parent):
+        raise NotImplementedError()
 
     @expr_wrapper
     def c_Subscript(self, parent):
@@ -273,7 +279,6 @@ class AstNodeX(AstNode):
         self.fields['slice'].value.to_xml(ele_slice)
         assert self.tokens.pop().exact_type == Token.RSQB
         ele_slice.appendChild(DOM.Text(self.tokens.text_prev2next()))
-        close_text = self.tokens.prev_space() + ']'
         sub_ele.appendChild(ele_slice)
 
 
@@ -405,6 +410,30 @@ class AstNodeX(AstNode):
         parent.appendChild(ele)
 
 
+    def c_DictComp(self, parent):
+        raise NotImplementedError()
+    def c_Ellipsis(self, parent):
+        raise NotImplementedError()
+    def c_GeneratorExp(self, parent):
+        raise NotImplementedError()
+    def c_IfExp(self, parent):
+        raise NotImplementedError()
+    def c_Lambda(self, parent):
+        raise NotImplementedError()
+    def c_ListComp(self, parent):
+        raise NotImplementedError()
+    def c_Set(self, parent):
+        raise NotImplementedError()
+    def c_SetComp(self, parent):
+        raise NotImplementedError()
+    def c_Starred(self, parent):
+        raise NotImplementedError()
+    def c_Yield(self, parent):
+        raise NotImplementedError()
+    def c_YieldFrom(self, parent):
+        raise NotImplementedError()
+
+
     ###########################################################
     # stmt
     ###########################################################
@@ -457,15 +486,20 @@ class AstNodeX(AstNode):
         self.tokens.write_non_ast_tokens(parent)
         ele = Element('Assign')
         # targets
-        targets = Element('targets')
-        self._c_comma_delimitted(targets, self.fields['targets'].value)
-        ele.appendChild(targets)
-        # op `=`
-        assert self.tokens.pop().exact_type == Token.EQUAL
-        ele.appendChild(DOM.Text(self.tokens.text_prev2next()))
+        ele_targets = Element('targets')
+        ele.appendChild(ele_targets)
+        for target in self.fields['targets'].value:
+            target.to_xml(ele_targets)
+            # op `=`
+            assert self.tokens.pop().exact_type == Token.EQUAL
+            ele_targets.appendChild(DOM.Text(self.tokens.text_prev2next()))
         # value
         self.fields['value'].value.to_xml(ele)
         parent.appendChild(ele)
+
+
+    def c_AugAssign(self, parent):
+        raise NotImplementedError()
 
 
     def _c_import_names(self, ele):
@@ -536,8 +570,11 @@ class AstNodeX(AstNode):
     def c_Return(self, parent):
         self.tokens.write_non_ast_tokens(parent)
         assert self.tokens.pop().string == 'return'
-        ele = Element('Return', text='return' + self.tokens.space_right())
-        self.fields['value'].value.to_xml(ele)
+        ele = Element('Return', text='return')
+        value = self.fields['value'].value
+        if value:
+            ele.appendChild(DOM.Text(self.tokens.space_right()))
+            value.to_xml(ele)
         parent.appendChild(ele)
 
 
@@ -614,6 +651,16 @@ class AstNodeX(AstNode):
             arguments_ele.appendChild(ele_vararg)
             self._c_delimiter(arguments_ele, (Token.COMMA, Token.NL))
 
+        if arguments.fields['kwonlyargs'].value:
+            raise NotImplementedError()
+
+        if arguments.fields['kw_defaults'].value:
+            raise NotImplementedError()
+
+        if arguments.fields['kwarg'].value:
+            raise NotImplementedError()
+
+
         # close parent + colon
         assert self.tokens.pop().exact_type == Token.RPAR
         close_args_text = self.tokens.prev_space() + ')'
@@ -652,6 +699,16 @@ class AstNodeX(AstNode):
             bases_ele = Element('bases')
             self._c_comma_delimitted(bases_ele, bases)
             arguments_ele.appendChild(bases_ele)
+
+
+        if self.fields['keywords'].value:
+            raise NotImplementedError()
+        if self.fields['starargs'].value:
+            raise NotImplementedError()
+        if self.fields['kwargs'].value:
+            raise NotImplementedError()
+        if self.fields['decorator_list'].value:
+            raise NotImplementedError()
 
         # close arguments
         assert self.tokens.pop().exact_type == Token.RPAR
@@ -721,6 +778,15 @@ class AstNodeX(AstNode):
         self._c_field_list(ele, 'body')
         parent.appendChild(ele)
 
+        # else
+        orelse = self.fields['orelse'].value
+        if orelse:
+            self.tokens.write_non_ast_tokens(ele)
+            assert self.tokens.pop().string == 'else', self.tokens.current
+            else_text = self.tokens.text_prev2next() + ':'
+            assert self.tokens.pop().exact_type == Token.COLON
+            self._c_field_list(ele, 'orelse', text=else_text)
+
 
     def c_Raise(self, parent):
         self.tokens.write_non_ast_tokens(parent)
@@ -730,6 +796,10 @@ class AstNodeX(AstNode):
         ele_exc = Element('exc')
         self.fields['exc'].value.to_xml(ele_exc)
         ele.appendChild(ele_exc)
+
+        if self.fields['cause'].value:
+            raise NotImplementedError()
+
         parent.appendChild(ele)
 
 
@@ -798,6 +868,18 @@ class AstNodeX(AstNode):
             final_text = self.tokens.text_prev2next() + ':'
             assert self.tokens.pop().exact_type == Token.COLON
             self._c_field_list(ele, 'finalbody', text=final_text)
+
+
+    def c_With(self, parent):
+        raise NotImplementedError()
+
+
+    def c_Delete(self, parent):
+        raise NotImplementedError()
+    def c_Global(self, parent):
+        raise NotImplementedError()
+    def c_Nonlocal(self, parent):
+        raise NotImplementedError()
 
 
 
