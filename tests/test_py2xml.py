@@ -65,6 +65,9 @@ line 2""" '''
         assert s2xml(string) == \
             "<Expr><Bytes><s>b'part 1'</s> <s>b' /part 2'</s></Bytes></Expr>"
 
+    def test_ellipsis(self, s2xml):
+        assert s2xml('...') == \
+            "<Expr><Ellipsis>...</Ellipsis></Expr>"
 
 
 class TestTuple:
@@ -79,6 +82,14 @@ class TestTuple:
     def test_tuple_end_comma(self, s2xml):
         assert s2xml('1, 2 ,') == '<Expr><Tuple ctx="Load">'\
             '<Num>1</Num>, <Num>2</Num> ,</Tuple></Expr>'
+
+
+class TestStarred:
+    def test_starred(self, s2xml):
+        assert s2xml('*foo') == \
+            '<Expr><Starred ctx="Load">'\
+            '*<Name ctx="Load" name="foo">foo</Name>'\
+            '</Starred></Expr>'
 
 
 class TestExpressions:
@@ -102,6 +113,13 @@ class TestExpressions:
         assert s2xml('3 ; 5') == \
             '<Expr><Num>3</Num></Expr>'\
             ' ; <Expr><Num>5</Num></Expr>'
+
+
+class TestSet:
+    def test_set(self, s2xml):
+        assert s2xml('{ 1 , 2 , }') == \
+            '<Expr><Set>{ <Num>1</Num>'\
+            ' , <Num>2</Num> , }</Set></Expr>'
 
 
 
@@ -421,6 +439,83 @@ class TestCall:
             '</Call></Expr>'
 
 
+class TestListComp:
+    def test_listcomp(self, s2xml):
+        assert s2xml('[a for a in b]') == \
+            '<Expr><ListComp>[<elt><Name ctx="Load" name="a">a</Name></elt>'\
+            '<generators><comprehension> for '\
+            '<target><Name ctx="Store" name="a">a</Name></target>'\
+            ' in <iter><Name ctx="Load" name="b">b</Name></iter>'\
+            '</comprehension></generators>]</ListComp></Expr>'
+
+    def test_listcomp_ifs(self, s2xml):
+        assert s2xml('[a for a in b if a if True]') == \
+            '<Expr><ListComp>[<elt><Name ctx="Load" name="a">a</Name></elt>'\
+            '<generators><comprehension> for '\
+            '<target><Name ctx="Store" name="a">a</Name></target>'\
+            ' in <iter><Name ctx="Load" name="b">b</Name></iter>'\
+            '<ifs><if> if <Name ctx="Load" name="a">a</Name></if>'\
+            '<if> if <NameConstant>True</NameConstant></if></ifs>'\
+            '</comprehension></generators>]</ListComp></Expr>'
+
+    def test_listcomp_2(self, s2xml):
+        assert s2xml('[a for a in b for c in d]') == \
+            '<Expr><ListComp>[<elt><Name ctx="Load" name="a">a</Name></elt>'\
+            '<generators><comprehension> for '\
+            '<target><Name ctx="Store" name="a">a</Name></target>'\
+            ' in <iter><Name ctx="Load" name="b">b</Name></iter>'\
+            '</comprehension><comprehension> for '\
+            '<target><Name ctx="Store" name="c">c</Name></target>'\
+            ' in <iter><Name ctx="Load" name="d">d</Name></iter>'\
+            '</comprehension></generators>]</ListComp></Expr>'
+
+
+class TestGeneratorExp:
+    def test_generatorexp(self, s2xml):
+        assert s2xml('(a for a in b)') == \
+            '<Expr><GeneratorExp>(<elt><Name ctx="Load" name="a">a</Name></elt>'\
+            '<generators><comprehension> for '\
+            '<target><Name ctx="Store" name="a">a</Name></target>'\
+            ' in <iter><Name ctx="Load" name="b">b</Name></iter>'\
+            '</comprehension></generators>)</GeneratorExp></Expr>'
+
+class TestSetComp:
+    def test_setcomp(self, s2xml):
+        assert s2xml('{a for a in b}') == \
+            '<Expr><SetComp>{<elt><Name ctx="Load" name="a">a</Name></elt>'\
+            '<generators><comprehension> for '\
+            '<target><Name ctx="Store" name="a">a</Name></target>'\
+            ' in <iter><Name ctx="Load" name="b">b</Name></iter>'\
+            '</comprehension></generators>}</SetComp></Expr>'
+
+class TestDictComp:
+    def test_setcomp(self, s2xml):
+        assert s2xml('{a:0 for a in b}') == \
+            '<Expr><DictComp>{<key><Name ctx="Load" name="a">a</Name></key>'\
+            '<value><Num>0</Num></value>'\
+            '<generators><comprehension> for '\
+            '<target><Name ctx="Store" name="a">a</Name></target>'\
+            ' in <iter><Name ctx="Load" name="b">b</Name></iter>'\
+            '</comprehension></generators>}</DictComp></Expr>'
+
+
+class TestYield:
+    def test_yield(self, s2xml):
+        assert s2xml('yield') == \
+            '<Expr><Yield>yield</Yield></Expr>'
+
+    def test_yield_value(self, s2xml):
+        assert s2xml('yield 5') == \
+            '<Expr><Yield>yield <Num>5</Num></Yield></Expr>'
+
+    def test_yield_from(self, s2xml):
+        assert s2xml('yield from 5') == \
+            '<Expr><YieldFrom>yield from <Num>5</Num></YieldFrom></Expr>'
+
+
+
+####################### stmt
+
 class TestFuncDef:
     def test_funcdef(self, s2xml):
         assert s2xml('def four (  ):\n    4') == \
@@ -573,6 +668,14 @@ class TestAssign:
             '<Name ctx="Store" name="d">d</Name> = '\
             '<Name ctx="Store" name="e">e</Name> = </targets>'\
             '<Num>5</Num></Assign>'
+
+
+class TestAugAssign:
+    def test_add(self, s2xml):
+        assert s2xml('d += 5') == \
+            '<AugAssign><target><Name ctx="Store" name="d">d</Name>'\
+            '</target><op><Add> += </Add></op>'\
+            '<value><Num>5</Num></value></AugAssign>'
 
 
 class TestImport:
@@ -742,6 +845,26 @@ class TestTry:
         assert s2xml('try:\n    4\nfinally:\n    pass') == \
             '<Try>try:<body>\n    <Expr><Num>4</Num></Expr></body>'\
             '\n<finalbody>finally:\n    <Pass>pass</Pass></finalbody></Try>'
+
+class TestWith:
+    def test_with(self, s2xml):
+        assert s2xml('with 5:\n    pass') == \
+            '<With>with <items><withitem><Num>5</Num></withitem></items>:'\
+            '<body>\n    <Pass>pass</Pass></body></With>'
+
+    def test_with_var(self, s2xml):
+        assert s2xml('with 5 as foo:\n    pass') == \
+            '<With>with <items><withitem><Num>5</Num> as '\
+            '<Name ctx="Store" name="foo">foo</Name></withitem></items>:'\
+            '<body>\n    <Pass>pass</Pass></body></With>'
+
+    def test_with_multi(self, s2xml):
+        assert s2xml('with 5 as foo, 6 as bar:\n    pass') == \
+            '<With>with <items><withitem><Num>5</Num> as '\
+            '<Name ctx="Store" name="foo">foo</Name></withitem>'\
+            ', <withitem><Num>6</Num> as '\
+            '<Name ctx="Store" name="bar">bar</Name></withitem></items>:'\
+            '<body>\n    <Pass>pass</Pass></body></With>'
 
 
 def test_xml2py():

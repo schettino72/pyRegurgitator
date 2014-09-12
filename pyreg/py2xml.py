@@ -183,18 +183,20 @@ class AstNodeX(AstNode):
 
     @expr_wrapper
     def c_List(self, parent):
-        ele = Element('List')
-        ele.setAttribute('ctx', self.fields['ctx'].value.class_)
+        ele = Element(self.class_)
+        if 'ctx' in self.fields: # set doesnt have ctx
+            ele.setAttribute('ctx', self.fields['ctx'].value.class_)
         ele.appendChild(DOM.Text(self.pop_merge_NL())) #LSQB
         for item in self.fields['elts'].value:
             item.to_xml(ele)
             self._c_delimiter(ele, (Token.COMMA, Token.NL))
 
         # close brackets
-        assert self.tokens.pop().exact_type == Token.RSQB
-        ele.appendChild(DOM.Text(']'))
-
+        assert self.tokens.pop().type == Token.OP
+        ele.appendChild(DOM.Text(self.tokens.current.string))
         parent.appendChild(ele)
+
+    c_Set = c_List
 
 
     @expr_wrapper
@@ -237,6 +239,21 @@ class AstNodeX(AstNode):
         ele = Element('NameConstant', text=self.tokens.current.string)
         parent.appendChild(ele)
 
+    @expr_wrapper
+    def c_Ellipsis(self, parent):
+        assert self.tokens.pop().type == Token.OP
+        ele = Element('Ellipsis', text=self.tokens.current.string)
+        parent.appendChild(ele)
+
+    @expr_wrapper
+    def c_Starred(self, parent):
+        assert self.tokens.pop().exact_type == Token.STAR
+        text = '*' + self.tokens.space_right()
+        ele = Element('Starred', text=text)
+        ele.setAttribute('ctx', self.fields['ctx'].value.class_)
+        self.fields['value'].value.to_xml(ele)
+        parent.appendChild(ele)
+
 
     @expr_wrapper
     def c_Attribute(self, parent):
@@ -262,6 +279,7 @@ class AstNodeX(AstNode):
         self.fields['value'].value.to_xml(ele)
         parent.appendChild(ele)
 
+    @expr_wrapper
     def c_Slice(self, parent):
         ele = Element('Slice')
         parent.appendChild(ele)
@@ -321,6 +339,25 @@ class AstNodeX(AstNode):
         close_text = self.tokens.prev_space() + ']'
         ele_slice.appendChild(DOM.Text(close_text))
         sub_ele.appendChild(ele_slice)
+
+
+    @expr_wrapper
+    def c_Yield(self, parent):
+        assert self.tokens.pop().string == 'yield'
+        yield_text = self.tokens.current.string + self.tokens.space_right()
+        ele = Element(self.class_, text=yield_text)
+        # from (only for YieldFrom)
+        if self.class_ == 'YieldFrom':
+            assert self.tokens.pop().string == 'from'
+            from_text = self.tokens.current.string + self.tokens.space_right()
+            ele.appendChild(DOM.Text(from_text))
+        # value
+        value = self.fields['value'].value
+        if value:
+            value.to_xml(ele)
+        parent.appendChild(ele)
+
+    c_YieldFrom = c_Yield
 
 
     @expr_wrapper
@@ -483,27 +520,69 @@ class AstNodeX(AstNode):
         ele.appendChild(ele_orelse)
 
 
-
-    def c_DictComp(self, parent):
-        raise NotImplementedError()
-    def c_Ellipsis(self, parent):
-        raise NotImplementedError()
     def c_GeneratorExp(self, parent):
-        raise NotImplementedError()
+        ele = Element(self.class_)
+        ele.appendChild(DOM.Text(self.pop_merge_NL())) #LSQB
+
+        if 'elt' in self.fields: # GeneratorExp ListComp SetComp
+            # elt
+            ele_elt = Element('elt')
+            ele.appendChild(ele_elt)
+            self.fields['elt'].value.to_xml(ele_elt)
+        else: # DictComp
+            ele_key = Element('key')
+            ele.appendChild(ele_key)
+            self.fields['key'].value.to_xml(ele_key)
+            assert self.tokens.pop().exact_type == Token.COLON
+            ele_value = Element('value')
+            ele.appendChild(ele_value)
+            self.fields['value'].value.to_xml(ele_value)
+
+        # generators
+        ele_gen = Element('generators')
+        ele.appendChild(ele_gen)
+        for gen in self.fields['generators'].value:
+            ele_comp = Element('comprehension')
+            ele_gen.appendChild(ele_comp)
+            # for
+            assert self.tokens.pop().string == 'for'
+            ele_comp.appendChild(DOM.Text(self.tokens.text_prev2next()))
+            # target
+            ele_target = Element('target')
+            gen.fields['target'].value.to_xml(ele_target)
+            ele_comp.appendChild(ele_target)
+            # in
+            assert self.tokens.pop().string == 'in'
+            ele_comp.appendChild(DOM.Text(self.tokens.text_prev2next()))
+            # iter
+            ele_iter = Element('iter')
+            gen.fields['iter'].value.to_xml(ele_iter)
+            ele_comp.appendChild(ele_iter)
+
+            # ifs
+            ifs = gen.fields['ifs'].value
+            if ifs:
+                ele_ifs = Element('ifs')
+                ele_comp.appendChild(ele_ifs)
+                for gif in ifs:
+                    ele_if = Element('if')
+                    ele_ifs.appendChild(ele_if)
+                    # if
+                    assert self.tokens.pop().string == 'if'
+                    ele_if.appendChild(DOM.Text(self.tokens.text_prev2next()))
+                    # target
+                    gif.to_xml(ele_if)
+
+        # close brackets
+        assert self.tokens.pop().type == Token.OP
+        ele.appendChild(DOM.Text(self.tokens.current.string))
+        parent.appendChild(ele)
+
+    c_ListComp = expr_wrapper(c_GeneratorExp)
+    c_SetComp = c_ListComp
+    c_DictComp = c_ListComp
 
     def c_Lambda(self, parent):
-        raise NotImplementedError()
-    def c_ListComp(self, parent):
-        raise NotImplementedError()
-    def c_Set(self, parent):
-        raise NotImplementedError()
-    def c_SetComp(self, parent):
-        raise NotImplementedError()
-    def c_Starred(self, parent):
-        raise NotImplementedError()
-    def c_Yield(self, parent):
-        raise NotImplementedError()
-    def c_YieldFrom(self, parent):
         raise NotImplementedError()
 
 
@@ -572,7 +651,24 @@ class AstNodeX(AstNode):
 
 
     def c_AugAssign(self, parent):
-        raise NotImplementedError()
+        self.tokens.write_non_ast_tokens(parent)
+        ele = Element('AugAssign')
+        parent.appendChild(ele)
+        # target
+        ele_target = Element('target')
+        self.fields['target'].value.to_xml(ele_target)
+        ele.appendChild(ele_target)
+        # op
+        ele_op = Element('op')
+        assert self.tokens.pop().type == Token.OP
+        op = self.fields['op'].value
+        ele_op_val = Element(op.class_, text=self.tokens.text_prev2next())
+        ele_op.appendChild(ele_op_val)
+        ele.appendChild(ele_op)
+        # value
+        ele_value = Element('value')
+        self.fields['value'].value.to_xml(ele_value)
+        ele.appendChild(ele_value)
 
 
     def _c_import_names(self, ele):
@@ -949,7 +1045,29 @@ class AstNodeX(AstNode):
 
 
     def c_With(self, parent):
-        raise NotImplementedError()
+        self.tokens.write_non_ast_tokens(parent)
+        assert self.tokens.pop().string == 'with'
+        with_text = 'with' + self.tokens.space_right()
+        ele = Element(self.class_, text=with_text)
+        ele_items = Element('items')
+        ele.appendChild(ele_items)
+        for item in self.fields['items'].value:
+            ele_item = Element('withitem')
+            ele_items.appendChild(ele_item)
+            item.fields['context_expr'].value.to_xml(ele_item)
+            opt_vars = item.fields['optional_vars'].value
+            if opt_vars:
+                assert self.tokens.pop().string == 'as'
+                ele_item.appendChild(DOM.Text(self.tokens.text_prev2next()))
+                opt_vars.to_xml(ele_item)
+            self._c_delimiter(ele_items, (Token.COMMA, Token.NL))
+
+        # colon
+        assert self.tokens.pop().exact_type == Token.COLON
+        ele.appendChild(DOM.Text(self.tokens.prev_space() + ':'))
+        # body
+        self._c_field_list(ele, 'body')
+        parent.appendChild(ele)
 
 
     def c_Delete(self, parent):
