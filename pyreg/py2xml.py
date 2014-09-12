@@ -50,18 +50,8 @@ class AstNodeX(AstNode):
             except Exception: # pragma: no cover
                 print('Error on {}'.format(self))
                 raise
-
-        log.warn("**** unimplemented coverter %s", self.class_)
-        # default converter
-        class_info = self.MAP[self.class_]
-        for field_name in class_info['order']:
-            field = self.fields[field_name]
-            if isinstance(field.value, list):
-                for v in field.value:
-                    v.to_xml(parent)
-            else:
-                field.value.to_xml(parent)
-        return parent # XXX should not return anything
+        else: # pragma: no cover
+            raise Exception("**** unimplemented coverter %s" % self.class_)
 
 
     def real_start(self):
@@ -153,7 +143,7 @@ class AstNodeX(AstNode):
                     break
                 elif exact_type and exact_type != next_token.exact_type:
                     # FIXME deal with new line before figure out not a match
-                    return ''
+                    return text
                 found_token = True
             self.tokens.pop()
             if include_left:
@@ -184,8 +174,10 @@ class AstNodeX(AstNode):
 
     @expr_wrapper
     def c_Num(self, parent):
-        parent.appendChild(Element('Num', text=str(self.fields['n'].value)))
-        assert self.tokens.pop().type == Token.NUMBER, self.tokens.current
+        token = self.tokens.pop()
+        assert token.type == Token.NUMBER, self.tokens.current
+        parent.appendChild(Element('Num', text=token.string))
+
 
     @expr_wrapper
     def c_Str(self, parent):
@@ -482,8 +474,7 @@ class AstNodeX(AstNode):
                              self.fields['comparators'].value):
             cmp_text = self.tokens.space_right()
             for token in range(self.CMP_TOKEN_COUNT[op.class_]):
-                cmp_text += self.tokens.pop().string
-                cmp_text += self.tokens.space_right()
+                cmp_text += self.pop_merge_NL()
             ele_op = Element('cmpop', text=cmp_text)
             ele.appendChild(ele_op)
             # value
@@ -565,8 +556,7 @@ class AstNodeX(AstNode):
         ele.appendChild(ele_body)
 
         # if
-        assert self.tokens.pop().string == 'if'
-        ele.appendChild(DOM.Text(self.tokens.text_prev2next()))
+        ele.appendChild(DOM.Text(self.pop_merge_NL(lspace=True)))
 
         # test
         ele_test = Element('test')
@@ -574,8 +564,7 @@ class AstNodeX(AstNode):
         ele.appendChild(ele_test)
 
         # else
-        assert self.tokens.pop().string == 'else'
-        ele.appendChild(DOM.Text(self.tokens.text_prev2next()))
+        ele.appendChild(DOM.Text(self.pop_merge_NL(lspace=True)))
 
         # orelse
         ele_orelse = Element('orelse')
@@ -599,6 +588,7 @@ class AstNodeX(AstNode):
             ele.appendChild(ele_key)
             self.fields['key'].value.to_xml(ele_key)
             assert self.tokens.pop().exact_type == Token.COLON
+            ele.appendChild(DOM.Text(self.tokens.text_prev2next()))
             ele_value = Element('value')
             ele.appendChild(ele_value)
             self.fields['value'].value.to_xml(ele_value)
@@ -846,8 +836,7 @@ class AstNodeX(AstNode):
         has_paren = False
         if token.exact_type == Token.LPAR:
             has_paren = True
-            self.tokens.pop()
-            ele.appendChild(DOM.Text('(' + self.tokens.space_right()))
+            ele.appendChild(DOM.Text(self.pop_merge_NL())) # LPAR
 
         # names
         names = Element('names')
@@ -855,8 +844,7 @@ class AstNodeX(AstNode):
         ele.appendChild(names)
 
         if has_paren:
-            self.tokens.pop()
-            ele.appendChild(DOM.Text(')' + self.tokens.space_right()))
+            ele.appendChild(DOM.Text(self.pop_merge_NL())) #RPAR
 
         # append to parent
         parent.appendChild(ele)
@@ -956,7 +944,8 @@ class AstNodeX(AstNode):
                 ele_deco = Element('decorator', text=deco_text)
                 ele_decorators.appendChild(ele_deco)
                 deco.to_xml(ele_deco)
-                self.tokens.write_non_ast_tokens(ele)
+                self.tokens.write_non_ast_tokens(ele_decorators)
+
 
         # def
         assert self.tokens.pop().string == 'def'
@@ -1068,7 +1057,7 @@ class AstNodeX(AstNode):
                 ele.appendChild(ele_orelse)
             else:
                 assert self.tokens.pop().string == 'else', self.tokens.current
-                else_text = self.tokens.text_prev2next() + ':'
+                else_text = 'else' + self.tokens.space_right() + ':'
                 assert self.tokens.pop().exact_type == Token.COLON
                 self._c_field_list(ele, 'orelse', text=else_text)
 
@@ -1139,7 +1128,7 @@ class AstNodeX(AstNode):
         parent.appendChild(ele)
         # except
         self.tokens.write_non_ast_tokens(ele)
-        assert self.tokens.pop().string == 'except'
+        assert self.tokens.pop().string == 'except', self.tokens.current
         except_text = 'except' + self.tokens.space_right()
         ele.appendChild(DOM.Text(except_text))
         # type
@@ -1294,13 +1283,11 @@ class SrcToken:
         Token.INDENT, Token.DEDENT,
         ])
     def write_non_ast_tokens(self, parent_ele):
-        token = None
         text = ''
         while self.next().exact_type in self.NON_AST_TOKENS:
             token = self.pop()
             text += self.prev_space() + token.string
-        if token:
-            text += self.space_right()
+        text += self.space_right()
         parent_ele.appendChild(DOM.Text(text))
 
 
@@ -1331,6 +1318,7 @@ def xml2py(filename):
 
 def main(args=None): # pragma: no cover
     """command line program for py2xml"""
+    import sys
     description = """convert python module to XML representation"""
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('-r', '--reverse', dest='reverse',
@@ -1342,9 +1330,9 @@ def main(args=None): # pragma: no cover
 
     args = parser.parse_args(args)
     if args.reverse:
-        print(xml2py(args.py_file[0]), end='')
+        sys.stdout.buffer.write(xml2py(args.py_file[0]).encode('utf8'))
     else:
-        print(py2xml(args.py_file[0]), end='')
+        sys.stdout.buffer.write(py2xml(args.py_file[0]).encode('utf8'))
 
 
 if __name__ == "__main__": # pragma: no cover

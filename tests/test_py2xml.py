@@ -26,6 +26,9 @@ class TestSimpleExpressions:
     def test_num(self, s2xml):
         assert s2xml('6') == '<Expr><Num>6</Num></Expr>'
 
+    def test_num_decimal(self, s2xml):
+        assert s2xml('.5') == '<Expr><Num>.5</Num></Expr>'
+
     def test_str(self, s2xml):
         assert s2xml('"my string"') == \
             '<Expr><Str><s>"my string"</s></Str></Expr>'
@@ -85,6 +88,21 @@ class TestTuple:
     def test_tuple_end_comma(self, s2xml):
         assert s2xml('1, 2 ,') == '<Expr><Tuple ctx="Load">'\
             '<Num>1</Num>, <Num>2</Num> ,</Tuple></Expr>'
+
+
+class TestComment:
+    def test_comment(self, s2xml):
+        assert s2xml('# hi') == \
+            '# hi'
+
+    def test_expr_comment(self, s2xml):
+        assert s2xml('3 # hi') == \
+            '<Expr><Num>3</Num></Expr> # hi'
+
+    def test_tupple_comment(self, s2xml):
+        assert s2xml('3, 4 # hi') == \
+            '<Expr><Tuple ctx="Load"><Num>3</Num>, <Num>4</Num>'\
+            ' # hi</Tuple></Expr>'
 
 
 class TestStarred:
@@ -384,6 +402,15 @@ class TestCompare:
             '<value><Num>3</Num></value>'\
             '</Compare></Expr>'
 
+    def test_compare_multiline(self, s2xml):
+        assert s2xml('(1 <\n 2)') == \
+            '<Expr>(<Compare>'\
+            '<value><Num>1</Num></value>'\
+            '<cmpop> &lt;\n </cmpop>'\
+            '<value><Num>2</Num></value>'\
+            '</Compare>)</Expr>'
+
+
 class TestIfExp:
     def test_ifexp(self, s2xml):
         assert s2xml('1 if True else 0') == \
@@ -568,9 +595,9 @@ class TestSetComp:
 
 class TestDictComp:
     def test_setcomp(self, s2xml):
-        assert s2xml('{a:0 for a in b}') == \
+        assert s2xml('{a : 0 for a in b}') == \
             '<Expr><DictComp>{<key><Name ctx="Load" name="a">a</Name></key>'\
-            '<value><Num>0</Num></value>'\
+            ' : <value><Num>0</Num></value>'\
             '<generators><comprehension> for '\
             '<target><Name ctx="Store" name="a">a</Name></target>'\
             ' in <iter><Name ctx="Load" name="b">b</Name></iter>'\
@@ -615,11 +642,13 @@ class TestFuncDef:
             '<body>\n    <Expr><Num>4</Num></Expr></body></FunctionDef>'
 
     def test_funcdef_decorator(self, s2xml):
-        assert s2xml('@foodeco\ndef four (  ):\n    4') == \
-            '<FunctionDef name="four">'\
-            '<decorators><decorator>@<Name ctx="Load" name="foodeco">'\
-            'foodeco</Name></decorator></decorators>'\
-            '\ndef four<arguments> (  ):</arguments>'\
+        assert s2xml('@foodeco #1\n@deco2 #2\ndef four (  ):\n    4') == \
+            '<FunctionDef name="four"><decorators>'\
+            '<decorator>@<Name ctx="Load" name="foodeco">'\
+            'foodeco</Name></decorator> #1\n'\
+            '<decorator>@<Name ctx="Load" name="deco2">'\
+            'deco2</Name></decorator> #2\n'\
+            '</decorators>def four<arguments> (  ):</arguments>'\
             '<body>\n    <Expr><Num>4</Num></Expr></body></FunctionDef>'
 
     def test_funcdef_arg(self, s2xml):
@@ -874,6 +903,13 @@ class TestImportFrom:
             ',\n <alias><name>baz</name></alias></names>)'\
             '</ImportFrom>'
 
+    def test_importfrom_par_nl2(self, s2xml):
+        assert s2xml('from foo import (\nbar,\n baz\n)') == \
+            '<ImportFrom level="0">from <module>foo</module> import'\
+            ' (\n<names><alias><name>bar</name></alias>'\
+            ',\n <alias><name>baz</name></alias>\n</names>)'\
+            '</ImportFrom>'
+
 
 
 class TestWhile:
@@ -920,6 +956,20 @@ class TestIf:
             '<body>\n    <Pass>pass</Pass></body>\n'\
             '<orelse><If>elif <test><NameConstant>True</NameConstant></test>'\
             ':<body>\n    <Pass>pass</Pass></body></If></orelse></If>'
+
+    def test_if_single_line(self, s2xml):
+        assert s2xml('if True : pass') == \
+            '<If>if <test><NameConstant>True</NameConstant></test> :'\
+            '<body> <Pass>pass</Pass></body></If>'
+
+    def test_if_else_single_line(self, s2xml):
+        assert s2xml('while 1:\n    if True: pass\n    else: 2') == \
+            '<While>while <test><Num>1</Num></test>:<body>\n'\
+            '    <If>if <test><NameConstant>True</NameConstant></test>:'\
+            '<body> <Pass>pass</Pass></body>\n    '\
+            '<orelse>else: <Expr><Num>2</Num></Expr></orelse>'\
+            '</If></body></While>'
+
 
 class TestFor:
     def test_for(self, s2xml):
