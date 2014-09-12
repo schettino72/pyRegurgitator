@@ -212,8 +212,6 @@ class TestAtrribute:
             'foo</Name></value>.<attr>bar</attr></Attribute></value>'\
             '.<attr>baz</attr></Attribute></Expr>'
 
-    #http://bugs.python.org/issue18374
-    @pytest.mark.xfail
     def test_attr_par(self, s2xml):
         assert s2xml('(foo).bar') == \
             '<Expr><Attribute ctx="Load">'\
@@ -1057,3 +1055,20 @@ class TestNonLocal:
             '<name>a</name>'\
             ' , <name>b</name>'\
             '</names></Nonlocal>'
+
+
+class TestBugs:
+    def test_expr_parenthesis_complex(self, s2xml):
+        assert s2xml('str((1-2)*23//10)') == \
+            '<Expr><Call><func><Name ctx="Load" name="str">str</Name></func>'\
+            '(<args><BinOp><BinOp>'\
+            '(<BinOp><Num>1</Num><Sub>-</Sub><Num>2</Num></BinOp>)'\
+            '<Mult>*</Mult><Num>23</Num></BinOp>'\
+            '<FloorDiv>//</FloorDiv><Num>10</Num></BinOp></args>)</Call></Expr>'
+
+    def test_binop_attr(self, s2xml):
+        assert s2xml('(1 + 2 + 3).bit_len') == \
+            '<Expr><Attribute ctx="Load"><value>'\
+            '(<BinOp><BinOp><Num>1</Num><Add> + </Add><Num>2</Num></BinOp>'\
+            '<Add> + </Add><Num>3</Num></BinOp>)'\
+            '</value>.<attr>bit_len</attr></Attribute></Expr>'

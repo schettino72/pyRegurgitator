@@ -64,24 +64,76 @@ class AstNodeX(AstNode):
         return parent # XXX should not return anything
 
 
+    def real_start(self):
+        """Because of http://bugs.python.org/issue18374"""
+        if self.class_ == 'Attribute':
+            first = self.fields['value'].value
+            return (first.line, first.column)
+        if self.class_ == 'BinOp':
+            first = self.fields['left'].value
+            return (first.line, first.column)
+        return (self.line, self.column)
+
     ###########################################################
     # expr
     ###########################################################
 
     def expr_wrapper(func):
-        """deals with optional "()" around expressions"""
+        """deals with optional "()" around expressions
+
+        Because of http://bugs.python.org/issue18374
+        The column number of nodes is not reliable.
+
+        So we need to parse until the end of an expression
+        to determine if the open parenthesis is being applied to
+        the whole expression or just the first element.
+        """
         def _build_expr(self, parent):
-            has_PAR = False
             next_token = self.tokens.next()
             if next_token.exact_type == Token.LPAR:
                 if next_token.start < (self.line, self.column):
-                    has_PAR = True
-                    text = self.pop_merge_NL() # LPAR
-                    parent.appendChild(DOM.Text(text))
-            func(self, parent)
-            if has_PAR:
+                    lpar_str = self.pop_merge_NL()
+                    element1_start = self.tokens.next().start
+                    self.tokens.lpar.append([lpar_str, element1_start, self])
+            fragment = Element('frag')
+            func(self, fragment)
+
+            # detect if next significant token is RPAR
+            has_rparen = False
+            pos = -1
+            while True:
+                token = self.tokens.list[pos]
+                if token.exact_type == Token.RPAR:
+                    has_rparen = True
+                    break
+                elif token.exact_type in (Token.NL, Token.COMMENT):
+                    pos -= 1
+                    continue
+                else:
+                    break
+
+            # check if the paren is closing this node
+            if has_rparen and self.tokens.lpar:
+                lpar_text, start, node = self.tokens.lpar[-1]
+                if start == self.real_start() or node is self:
+                    close_paren = True
+                else:
+                    close_paren = False
+            else:
+                close_paren = False
+
+            # append paren (if any) and fragment to parent
+            if close_paren:
+                self.tokens.lpar.pop()
+                parent.appendChild(DOM.Text(lpar_text))
+                for child in fragment.childNodes:
+                    parent.appendChild(child)
                 text = self.pop_merge_NL(lspace=True, rspace=False)
                 parent.appendChild(DOM.Text(text))
+            else:
+                for child in fragment.childNodes:
+                    parent.appendChild(child)
+
         return _build_expr
 
 
@@ -277,7 +329,7 @@ class AstNodeX(AstNode):
         text = self.pop_merge_NL()
         attribute_ele.appendChild(DOM.Text(text))
         # attr name
-        assert self.tokens.pop().type == Token.NAME
+        assert self.tokens.pop().type == Token.NAME, self.tokens.current
         attr_ele = Element('attr', text=self.tokens.current.string)
         attribute_ele.appendChild(attr_ele)
         parent.appendChild(attribute_ele)
@@ -1187,6 +1239,12 @@ class SrcToken:
         self.current = None
         self.previous = None
         self.pop() # ignore encoding
+        # helper to determine in which expression the () is being applied
+        # list of tuple with 3 elements:
+        #  - string containing Token.LPAR
+        #  - 2-tuple with line, column position of first element in expr
+        #  - first node to see the LPAR
+        self.lpar = []
 
     def pop(self):
         self.previous = self.current
