@@ -433,6 +433,7 @@ class AstNodeX(AstNode):
         parent.appendChild(ele)
 
 
+
     @expr_wrapper
     def c_Call(self, parent):
         ele = Element('Call')
@@ -582,8 +583,26 @@ class AstNodeX(AstNode):
     c_SetComp = c_ListComp
     c_DictComp = c_ListComp
 
+
+    @expr_wrapper
     def c_Lambda(self, parent):
-        raise NotImplementedError()
+        assert self.tokens.pop().string == 'lambda'
+        ele = Element('Lambda', text='lambda' + self.tokens.space_right())
+        # arguments
+        arguments_ele = Element('arguments')
+        self._arguments(arguments_ele)
+        ele.appendChild(arguments_ele)
+
+        # COLON :
+        assert self.tokens.pop().exact_type == Token.COLON
+        ele.appendChild(DOM.Text(':' + self.tokens.space_right()))
+
+        # body
+        ele_body = Element('body')
+        self.fields['body'].value.to_xml(ele_body)
+        ele.appendChild(ele_body)
+        parent.appendChild(ele)
+
 
 
     ###########################################################
@@ -648,6 +667,39 @@ class AstNodeX(AstNode):
         # value
         self.fields['value'].value.to_xml(ele)
         parent.appendChild(ele)
+
+
+    def c_Delete(self, parent):
+        self.tokens.write_non_ast_tokens(parent)
+        assert self.tokens.pop().string == 'del'
+        ele = Element('Delete', text='del' + self.tokens.space_right())
+        # targets
+        ele_targets = Element('targets')
+        ele.appendChild(ele_targets)
+        for target in self.fields['targets'].value:
+            target.to_xml(ele_targets)
+            # optional comma
+            self._c_delimiter(ele_targets, (Token.COMMA, Token.NL))
+        parent.appendChild(ele)
+
+
+    def c_Global(self, parent):
+        self.tokens.write_non_ast_tokens(parent)
+        assert self.tokens.pop().type == Token.NAME
+        text = self.tokens.current.string + self.tokens.space_right()
+        ele = Element(self.class_, text=text)
+        # names
+        ele_names = Element('names')
+        ele.appendChild(ele_names)
+        for name in self.fields['names'].value:
+            assert self.tokens.pop().type == Token.NAME
+            ele_name = Element('name', text=name.value)
+            ele_names.appendChild(ele_name)
+            # optional comma
+            self._c_delimiter(ele_names, (Token.COMMA, Token.NL))
+        parent.appendChild(ele)
+
+    c_Nonlocal = c_Global
 
 
     def c_AugAssign(self, parent):
@@ -748,46 +800,21 @@ class AstNodeX(AstNode):
 
 
     def _arg_element(self, arg):
+        """:return: XML node"""
         arg_ele = Element('arg')
         arg_ele.setAttribute('name', arg.fields['arg'].value)
         arg_ele.appendChild(DOM.Text(arg.fields['arg'].value))
+        if arg.fields['annotation'].value:
+            raise NotImplementedError()
         return arg_ele
 
-    def c_FunctionDef(self, parent):
-        self.tokens.write_non_ast_tokens(parent)
-        ele = Element('FunctionDef')
 
-        # decorator
-        decorators = self.fields['decorator_list'].value
-        if decorators:
-            ele_decorators = Element('decorators')
-            ele.appendChild(ele_decorators)
-            for deco in decorators:
-                assert self.tokens.pop().exact_type == Token.AT
-                deco_text = '@' + self.tokens.space_right()
-                ele_deco = Element('decorator', text=deco_text)
-                ele_decorators.appendChild(ele_deco)
-                deco.to_xml(ele_deco)
-                self.tokens.write_non_ast_tokens(ele)
-
-        # def
-        assert self.tokens.pop().string == 'def'
-        ele.appendChild(DOM.Text('def' + self.tokens.space_right()))
-
-        # name
-        assert self.tokens.pop().type == Token.NAME
-        name = self.fields['name'].value
-        ele.setAttribute('name', name)
-        ele.appendChild(DOM.Text(name))
-
-        # arguments
+    def _arguments(self, arguments_ele):
+        """convert arugments for FuncDef and Lambda"""
         arguments = self.fields['args'].value
-        start_arguments_text = self.pop_merge_NL(lspace=True) # LPAR
-        arguments_ele = Element('arguments', text=start_arguments_text)
-
+        # args
         args = arguments.fields['args'].value
         if args:
-            # args
             f_defaults = arguments.fields['defaults'].value
             defaults = ([None] * (len(args) - len(f_defaults))) + f_defaults
             args_ele = Element('args')
@@ -829,6 +856,38 @@ class AstNodeX(AstNode):
             raise NotImplementedError()
 
 
+
+    def c_FunctionDef(self, parent):
+        self.tokens.write_non_ast_tokens(parent)
+        ele = Element('FunctionDef')
+
+        # decorator
+        decorators = self.fields['decorator_list'].value
+        if decorators:
+            ele_decorators = Element('decorators')
+            ele.appendChild(ele_decorators)
+            for deco in decorators:
+                assert self.tokens.pop().exact_type == Token.AT
+                deco_text = '@' + self.tokens.space_right()
+                ele_deco = Element('decorator', text=deco_text)
+                ele_decorators.appendChild(ele_deco)
+                deco.to_xml(ele_deco)
+                self.tokens.write_non_ast_tokens(ele)
+
+        # def
+        assert self.tokens.pop().string == 'def'
+        ele.appendChild(DOM.Text('def' + self.tokens.space_right()))
+
+        # name
+        assert self.tokens.pop().type == Token.NAME
+        name = self.fields['name'].value
+        ele.setAttribute('name', name)
+        ele.appendChild(DOM.Text(name))
+
+        # args
+        start_arguments_text = self.pop_merge_NL(lspace=True) # LPAR
+        arguments_ele = Element('arguments', text=start_arguments_text)
+        self._arguments(arguments_ele)
 
         # close parent + colon
         assert self.tokens.pop().exact_type == Token.RPAR
@@ -971,9 +1030,14 @@ class AstNodeX(AstNode):
             exc.to_xml(ele_exc)
             ele.appendChild(ele_exc)
 
-        if self.fields['cause'].value:
-            raise NotImplementedError()
-
+        # cause
+        cause = self.fields['cause'].value
+        if cause:
+            assert self.tokens.pop().string == 'from'
+            ele.appendChild(DOM.Text(self.tokens.text_prev2next()))
+            ele_cause = Element('cause')
+            cause.to_xml(ele_cause)
+            ele.appendChild(ele_cause)
         parent.appendChild(ele)
 
 
@@ -1068,14 +1132,6 @@ class AstNodeX(AstNode):
         # body
         self._c_field_list(ele, 'body')
         parent.appendChild(ele)
-
-
-    def c_Delete(self, parent):
-        raise NotImplementedError()
-    def c_Global(self, parent):
-        raise NotImplementedError()
-    def c_Nonlocal(self, parent):
-        raise NotImplementedError()
 
 
 

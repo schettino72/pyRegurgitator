@@ -513,6 +513,20 @@ class TestYield:
             '<Expr><YieldFrom>yield from <Num>5</Num></YieldFrom></Expr>'
 
 
+class TestLambda:
+    def test_lambda(self, s2xml):
+        assert s2xml('lambda : 4') == \
+            '<Expr><Lambda>lambda <arguments/>: '\
+            '<body><Num>4</Num></body></Lambda></Expr>'
+
+    def test_lambda_args(self, s2xml):
+        assert s2xml('lambda a, b=2 : 4') == \
+            '<Expr><Lambda>lambda <arguments><args>'\
+            '<arg name="a">a</arg>, '\
+            '<arg name="b">b<default>=<Num>2</Num></default></arg> '\
+            '</args></arguments>: '\
+            '<body><Num>4</Num></body></Lambda></Expr>'
+
 
 ####################### stmt
 
@@ -806,6 +820,11 @@ class TestRaise:
         assert s2xml('raise 2') == \
             '<Raise>raise <exc><Num>2</Num></exc></Raise>'
 
+    def test_raise_exc_from(self, s2xml):
+        assert s2xml('raise 2 from a') == \
+            '<Raise>raise <exc><Num>2</Num></exc>'\
+            ' from <cause><Name ctx="Load" name="a">a</Name></cause></Raise>'
+
 class TestTry:
     def test_try(self, s2xml):
         assert s2xml('try:\n    4\nexcept:\n    pass') == \
@@ -865,6 +884,46 @@ class TestWith:
             ', <withitem><Num>6</Num> as '\
             '<Name ctx="Store" name="bar">bar</Name></withitem></items>:'\
             '<body>\n    <Pass>pass</Pass></body></With>'
+
+
+class TestDelete:
+    def test_delete(self, s2xml):
+        assert s2xml('del a') == \
+            '<Delete>del <targets>'\
+            '<Name ctx="Del" name="a">a</Name>'\
+            '</targets></Delete>'
+
+    def test_delete_n(self, s2xml):
+        assert s2xml('del a , b') == \
+            '<Delete>del <targets>'\
+            '<Name ctx="Del" name="a">a</Name>'\
+            ' , <Name ctx="Del" name="b">b</Name>'\
+            '</targets></Delete>'
+
+    def test_delete_n_comma(self, s2xml):
+        assert s2xml('del a , b ,') == \
+            '<Delete>del <targets>'\
+            '<Name ctx="Del" name="a">a</Name>'\
+            ' , <Name ctx="Del" name="b">b</Name>'\
+            ' ,</targets></Delete>'
+
+
+class TestGlobal:
+    def test_global(self, s2xml):
+        assert s2xml('global a , b') == \
+            '<Global>global <names>'\
+            '<name>a</name>'\
+            ' , <name>b</name>'\
+            '</names></Global>'
+
+
+class TestNonLocal:
+    def test_nonlocal(self, s2xml):
+        assert s2xml('nonlocal a , b') == \
+            '<Nonlocal>nonlocal <names>'\
+            '<name>a</name>'\
+            ' , <name>b</name>'\
+            '</names></Nonlocal>'
 
 
 def test_xml2py():

@@ -71,8 +71,12 @@ class ListField(AstField):
     def __init__(self, value, path, lines, parent):
         self.value = []
         for i,n in enumerate(value):
-            node = parent.__class__(n, "%s[%d]" % (path,i), lines, parent)
-            self.value.append(node)
+            path = "%s[%d]" % (path,i)
+            if isinstance(n , ast.AST):
+                node = parent.__class__(n, path, lines, parent)
+                self.value.append(node)
+            else:
+                self.value.append(TypeField(n, path, lines))
         self.path = path
 
     def line(self):
