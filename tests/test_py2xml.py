@@ -112,6 +112,17 @@ class TestExpressions:
     def test_expr_in_parenthesis2(self, s2xml):
         assert s2xml('(  3 )') == '<Expr>(  <Num>3</Num> )</Expr>'
 
+    def test_expr_in_parenthesis3(self, s2xml):
+        assert s2xml('(  3\n )') == '<Expr>(  <Num>3</Num>\n )</Expr>'
+
+    def test_expr_in_parenthesis4(self, s2xml):
+        assert s2xml('(\n  3 )') == '<Expr>(\n  <Num>3</Num> )</Expr>'
+
+    def test_expr_nl_comment(self, s2xml):
+        assert s2xml('(\n  3,\n # hi,\n4 )') == \
+            '<Expr>(\n  <Tuple ctx="Load">'\
+            '<Num>3</Num>,\n # hi,\n<Num>4</Num></Tuple> )</Expr>'
+
     def test_expr_semi_colon_separated(self, s2xml):
         assert s2xml('3 ; 5') == \
             '<Expr><Num>3</Num></Expr>'\
@@ -147,6 +158,11 @@ class TestList:
         assert s2xml('[\n 1,\n  2,\n ]') == \
             '<Expr><List ctx="Load">[\n <Num>1</Num>'\
             ',\n  <Num>2</Num>,\n ]</List></Expr>'
+
+    def test_list_multiline_comment(self, s2xml):
+        assert s2xml('[ 1, # hey\n  2,\n ]') == \
+            '<Expr><List ctx="Load">[ <Num>1</Num>'\
+            ', # hey\n  <Num>2</Num>,\n ]</List></Expr>'
 
 
 class TestDict:
@@ -195,6 +211,20 @@ class TestAtrribute:
             '<Attribute ctx="Load"><value><Name ctx="Load" name="foo">'\
             'foo</Name></value>.<attr>bar</attr></Attribute></value>'\
             '.<attr>baz</attr></Attribute></Expr>'
+
+    #http://bugs.python.org/issue18374
+    @pytest.mark.xfail
+    def test_attr_par(self, s2xml):
+        assert s2xml('(foo).bar') == \
+            '<Expr><Attribute ctx="Load">'\
+            '<value>(<Name ctx="Load" name="foo">foo</Name>)</value>'\
+            '.<attr>bar</attr></Attribute></Expr>'
+
+    def test_attr_nl(self, s2xml):
+        assert s2xml('(foo\n .bar)') == \
+            '<Expr>(<Attribute ctx="Load">'\
+            '<value><Name ctx="Load" name="foo">foo</Name></value>'\
+            '\n .<attr>bar</attr></Attribute>)</Expr>'
 
 
 class TestSubscript:
@@ -274,6 +304,8 @@ class TestBinOp:
         assert s2xml('(1) + 2') == \
             '<Expr><BinOp>(<Num>1</Num>)<Add> + </Add><Num>2</Num>'\
             '</BinOp></Expr>'
+
+
 
 
 
@@ -487,6 +519,15 @@ class TestListComp:
             '<ifs><if>\n if <Name ctx="Load" name="a">a</Name></if></ifs>'\
             '</comprehension></generators>]</ListComp></Expr>'
 
+    def test_listcomp_multiline_on_in(self, s2xml):
+        assert s2xml('[a for a\n in b if a]') == \
+            '<Expr><ListComp>[<elt><Name ctx="Load" name="a">a</Name></elt>'\
+            '<generators><comprehension> for '\
+            '<target><Name ctx="Store" name="a">a</Name></target>'\
+            '\n in <iter><Name ctx="Load" name="b">b</Name></iter>'\
+            '<ifs><if> if <Name ctx="Load" name="a">a</Name></if></ifs>'\
+            '</comprehension></generators>]</ListComp></Expr>'
+
     def test_listcomp_multiline_on_for(self, s2xml):
         assert s2xml('[a\n for a in b if a]') == \
             '<Expr><ListComp>[<elt><Name ctx="Load" name="a">a</Name></elt>'\
@@ -501,11 +542,22 @@ class TestListComp:
 class TestGeneratorExp:
     def test_generatorexp(self, s2xml):
         assert s2xml('(a for a in b)') == \
-            '<Expr><GeneratorExp>(<elt><Name ctx="Load" name="a">a</Name></elt>'\
+            '<Expr>(<GeneratorExp><elt><Name ctx="Load" name="a">a</Name></elt>'\
             '<generators><comprehension> for '\
             '<target><Name ctx="Store" name="a">a</Name></target>'\
             ' in <iter><Name ctx="Load" name="b">b</Name></iter>'\
-            '</comprehension></generators>)</GeneratorExp></Expr>'
+            '</comprehension></generators></GeneratorExp>)</Expr>'
+
+    def test_generatorexp_inside_call(self, s2xml):
+        assert s2xml('foo(a for a in b)') == \
+            '<Expr><Call>'\
+            '<func><Name ctx="Load" name="foo">foo</Name></func>(<args>'\
+            '<GeneratorExp><elt><Name ctx="Load" name="a">a</Name></elt>'\
+            '<generators><comprehension> for '\
+            '<target><Name ctx="Store" name="a">a</Name></target>'\
+            ' in <iter><Name ctx="Load" name="b">b</Name></iter>'\
+            '</comprehension></generators></GeneratorExp></args>)</Call></Expr>'
+
 
 class TestSetComp:
     def test_setcomp(self, s2xml):
@@ -549,10 +601,10 @@ class TestLambda:
 
     def test_lambda_args(self, s2xml):
         assert s2xml('lambda a, b=2 : 4') == \
-            '<Expr><Lambda>lambda <arguments><args>'\
+            '<Expr><Lambda>lambda <arguments>'\
             '<arg name="a">a</arg>, '\
             '<arg name="b">b<default>=<Num>2</Num></default></arg> '\
-            '</args></arguments>: '\
+            '</arguments>: '\
             '<body><Num>4</Num></body></Lambda></Expr>'
 
 
@@ -575,7 +627,7 @@ class TestFuncDef:
     def test_funcdef_arg(self, s2xml):
         assert s2xml('def p_four  ( ini ):\n    return ini + 4') == \
             '<FunctionDef name="p_four">def p_four'\
-            '<arguments>  ( <args><arg name="ini">ini</arg> </args>):</arguments>'\
+            '<arguments>  ( <arg name="ini">ini</arg> ):</arguments>'\
             '<body>\n    <Return>return <BinOp>'\
             '<Name ctx="Load" name="ini">ini</Name><Add> + </Add>'\
             '<Num>4</Num></BinOp></Return>'\
@@ -584,25 +636,25 @@ class TestFuncDef:
     def test_funcdef_args(self, s2xml):
         assert s2xml('def foo(a,  b):\n    pass') == \
             '<FunctionDef name="foo">def foo'\
-            '<arguments>(<args><arg name="a">a</arg>,  '\
-            '<arg name="b">b</arg></args>):</arguments>'\
+            '<arguments>(<arg name="a">a</arg>,  '\
+            '<arg name="b">b</arg>):</arguments>'\
             '<body>\n    <Pass>pass</Pass></body></FunctionDef>'
 
     def test_funcdef_args_default(self, s2xml):
         assert s2xml('def foo(a,  b= 5):\n    pass') == \
             '<FunctionDef name="foo">def foo'\
-            '<arguments>(<args><arg name="a">a</arg>,  '\
+            '<arguments>(<arg name="a">a</arg>,  '\
             '<arg name="b">b<default>= <Num>5</Num></default></arg>'\
-            '</args>):</arguments>'\
+            '):</arguments>'\
             '<body>\n    <Pass>pass</Pass></body></FunctionDef>'
 
     def test_funcdef_args_defaults(self, s2xml):
         assert s2xml('def foo(a=3, b= 5):\n    pass') == \
             '<FunctionDef name="foo">def foo'\
             '<arguments>('\
-            '<args><arg name="a">a<default>=<Num>3</Num></default></arg>, '\
+            '<arg name="a">a<default>=<Num>3</Num></default></arg>, '\
             '<arg name="b">b<default>= <Num>5</Num></default></arg>'\
-            '</args>):</arguments>'\
+            '):</arguments>'\
             '<body>\n    <Pass>pass</Pass></body></FunctionDef>'
 
     def test_funcdef_comment(self, s2xml):
@@ -630,6 +682,26 @@ class TestFuncDef:
             '<body>\n    <Pass>pass</Pass></body></FunctionDef>'
 
 
+    def test_funcdef_kwonly(self, s2xml):
+        assert s2xml('def foo(*a, b= 5):\n    pass') == \
+            '<FunctionDef name="foo">def foo'\
+            '<arguments>('\
+            '<vararg>*<arg name="a">a</arg></vararg>, '\
+            '<arg kwonly="" name="b">b<default>= <Num>5</Num></default></arg>'\
+            '):</arguments>'\
+            '<body>\n    <Pass>pass</Pass></body></FunctionDef>'
+
+    def test_funcdef_kwonly_no_vararg(self, s2xml):
+        assert s2xml('def foo(*, b= 5):\n    pass') == \
+            '<FunctionDef name="foo">def foo'\
+            '<arguments>('\
+            '*, '\
+            '<arg kwonly="" name="b">b<default>= <Num>5</Num></default></arg>'\
+            '):</arguments>'\
+            '<body>\n    <Pass>pass</Pass></body></FunctionDef>'
+
+
+
 class TestClassDef:
     def test_classdef(self, s2xml):
         assert s2xml('class Foo (  ) :\n    pass') == \
@@ -646,6 +718,13 @@ class TestClassDef:
     def test_classdef_no_args(self, s2xml):
         assert s2xml('class Foo :\n    pass') == \
             '<ClassDef name="Foo">class Foo :'\
+            '<body>\n    <Pass>pass</Pass></body></ClassDef>'
+
+    def test_classdef_keyword(self, s2xml):
+        assert s2xml('class Foo (bar=1) :\n    pass') == \
+            '<ClassDef name="Foo">class Foo<arguments> ('\
+            '<keyword><arg>bar</arg>=<value><Num>1</Num></value></keyword>'\
+            ')</arguments> :'\
             '<body>\n    <Pass>pass</Pass></body></ClassDef>'
 
 
@@ -728,30 +807,30 @@ class TestAugAssign:
 class TestImport:
     def test_import(self, s2xml):
         assert s2xml('import time') == \
-            '<Import>import<alias> <name>time</name></alias></Import>'
+            '<Import>import <alias><name>time</name></alias></Import>'
 
     def test_import_as(self, s2xml):
         assert s2xml('import time as t2') == \
-            '<Import>import'\
-            '<alias> <name>time</name> as <asname>t2</asname></alias>'\
+            '<Import>import '\
+            '<alias><name>time</name> as <asname>t2</asname></alias>'\
             '</Import>'
 
     def test_import_multi(self, s2xml):
         assert s2xml('import time ,  datetime') == \
-            '<Import>import<alias> <name>time</name></alias>'\
-            ' ,<alias>  <name>datetime</name></alias></Import>'
+            '<Import>import <alias><name>time</name></alias>'\
+            ' ,  <alias><name>datetime</name></alias></Import>'
 
     def test_import_as_multi(self, s2xml):
         assert s2xml('import time as  t2, datetime  as dt') == \
-            '<Import>import'\
-            '<alias> <name>time</name> as  <asname>t2</asname></alias>'\
-            ',<alias> <name>datetime</name>  as <asname>dt</asname></alias>'\
+            '<Import>import '\
+            '<alias><name>time</name> as  <asname>t2</asname></alias>'\
+            ', <alias><name>datetime</name>  as <asname>dt</asname></alias>'\
             '</Import>'
 
     def test_import_dot_as(self, s2xml):
         assert s2xml('import time.sleep as dorme') == \
-            '<Import>import'\
-            '<alias> <name>time.sleep</name> as <asname>dorme</asname></alias>'\
+            '<Import>import '\
+            '<alias><name>time.sleep</name> as <asname>dorme</asname></alias>'\
             '</Import>'
 
 
@@ -759,29 +838,44 @@ class TestImport:
 class TestImportFrom:
     def test_importfrom(self, s2xml):
         assert s2xml('from time import sleep') == \
-            '<ImportFrom level="0">from <module>time</module> import'\
-            '<names><alias> <name>sleep</name></alias></names>'\
+            '<ImportFrom level="0">from <module>time</module> import '\
+            '<names><alias><name>sleep</name></alias></names>'\
             '</ImportFrom>'
 
     def test_importfrom_dot_as(self, s2xml):
         assert s2xml('from foo.bar import baz as zeta') == \
-            '<ImportFrom level="0">from <module>foo.bar</module> import'\
-            '<names><alias> <name>baz</name> as <asname>zeta</asname>'\
+            '<ImportFrom level="0">from <module>foo.bar</module> import '\
+            '<names><alias><name>baz</name> as <asname>zeta</asname>'\
             '</alias></names></ImportFrom>'
 
     def test_importfrom_level(self, s2xml):
         assert s2xml('from .foo import bar,  baz as zeta') == \
-            '<ImportFrom level="1">from .<module>foo</module> import<names>'\
-            '<alias> <name>bar</name></alias>'\
-            ',<alias>  <name>baz</name> as <asname>zeta</asname></alias>'\
+            '<ImportFrom level="1">from .<module>foo</module> import <names>'\
+            '<alias><name>bar</name></alias>'\
+            ',  <alias><name>baz</name> as <asname>zeta</asname></alias>'\
             '</names>'\
             '</ImportFrom>'
 
     def test_importfrom_level2_module_none(self, s2xml):
         assert s2xml('from .. import bar') == \
-            '<ImportFrom level="2">from ..<module/> import<names>'\
-            '<alias> <name>bar</name></alias>'\
+            '<ImportFrom level="2">from ..<module/> import <names>'\
+            '<alias><name>bar</name></alias>'\
             '</names></ImportFrom>'
+
+    def test_importfrom_par(self, s2xml):
+        assert s2xml('from foo import (bar, baz)') == \
+            '<ImportFrom level="0">from <module>foo</module> import'\
+            ' (<names><alias><name>bar</name></alias>'\
+            ', <alias><name>baz</name></alias></names>)'\
+            '</ImportFrom>'
+
+    def test_importfrom_par_nl(self, s2xml):
+        assert s2xml('from foo import (bar,\n baz)') == \
+            '<ImportFrom level="0">from <module>foo</module> import'\
+            ' (<names><alias><name>bar</name></alias>'\
+            ',\n <alias><name>baz</name></alias></names>)'\
+            '</ImportFrom>'
+
 
 
 class TestWhile:
@@ -843,6 +937,12 @@ class TestFor:
             '<body>\n    <Pass>pass</Pass></body>'\
             '\n<orelse>else:\n    <Pass>pass</Pass></orelse>'\
             '</For>'
+
+    def test_for_in_parenthesis_nl(self, s2xml):
+        assert s2xml('for a in (\nb):\n    pass') == \
+            '<For>for <target><Name ctx="Store" name="a">a</Name></target>'\
+            ' in <iter>(\n<Name ctx="Load" name="b">b</Name>)</iter>:'\
+            '<body>\n    <Pass>pass</Pass></body></For>'
 
 class TestRaise:
     def test_raise(self, s2xml):
