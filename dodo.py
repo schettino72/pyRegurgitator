@@ -5,8 +5,6 @@ from doitpy.pyflakes import Pyflakes
 from doitpy.coverage import Coverage, PythonPackage
 from doitpy import pypi
 
-from pyreg.py2xml import xml2py
-
 
 
 DOIT_CONFIG = {'default_tasks': ['pyflakes', 'doctest']}
@@ -66,12 +64,6 @@ def task_asdl():
             }
 
 
-def xml_text(xml_file, target):
-    """return text content of a XML tree"""
-    with open(xml_file) as fp_in, open(target, 'w') as fp_out:
-        fp_out.write(xml2py(fp_in.read()))
-
-
 SAMPLES = glob.glob("samples/*.py")
 def task_regurgitate():
     """generate HTML for AST of sample modules"""
@@ -98,7 +90,7 @@ def task_regurgitate():
         yield {
             'basename': 'xml2py',
             'name': sample,
-            'actions':[(xml_text, (xml, gen_py))],
+            'actions':["py2xml --reverse {} > {}".format(xml, gen_py)],
             'file_dep': ['pyreg/py2xml.py', xml],
             'targets': [gen_py]
             }
@@ -109,6 +101,8 @@ def task_regurgitate():
             'actions':['diff {} {}'.format(sample, gen_py)],
             'file_dep': [sample, gen_py],
             }
+
+
 
 
 ############################

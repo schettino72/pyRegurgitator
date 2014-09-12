@@ -72,7 +72,10 @@ class AstNodeX(AstNode):
         """deals with optional "()" around expressions"""
         def _build_expr(self, parent):
             has_PAR = False
-            if self.tokens.next().exact_type == Token.LPAR:
+            next_token = self.tokens.next()
+            if (next_token.exact_type == Token.LPAR and
+                next_token.start[0] <= self.line and
+                next_token.start[1] < self.column):
                 has_PAR = True
                 token = self.tokens.pop()
                 text = '(' + self.tokens.space_right()
@@ -123,6 +126,12 @@ class AstNodeX(AstNode):
         ele.appendChild(DOM.Text(text))
 
 
+    def c_Module(self, parent):
+        ele = Element('Module')
+        for stmt in self.fields['body'].value:
+            stmt.to_xml(ele)
+        return ele
+
 
     @expr_wrapper
     def c_Num(self, parent):
@@ -168,16 +177,22 @@ class AstNodeX(AstNode):
     def c_Tuple(self, parent):
         ele = Element('Tuple')
         ele.setAttribute('ctx', self.fields['ctx'].value.class_)
-        first = True
-        for item in self.fields['elts'].value:
-            if not first:
-                ele.appendChild(DOM.Text(self.tokens.space_right()))
-            first = False
-            item.to_xml(ele)
-            text = self.pop_merge_NL(lspace=True, exact_type=Token.COMMA,
-                                     rspace=False)
-            ele.appendChild(DOM.Text(text))
-
+        elts = self.fields['elts'].value
+        if elts:
+            first = True
+            for item in elts:
+                if not first:
+                    ele.appendChild(DOM.Text(self.tokens.space_right()))
+                first = False
+                item.to_xml(ele)
+                text = self.pop_merge_NL(lspace=True, exact_type=Token.COMMA,
+                                         rspace=False)
+                ele.appendChild(DOM.Text(text))
+        else:
+            # special case, empty tuple is represented by an empty `()`
+            assert self.tokens.pop().exact_type == Token.LPAR
+            assert self.tokens.pop().exact_type == Token.RPAR
+            ele.appendChild(DOM.Text('(' + self.tokens.text_prev2next()))
         parent.appendChild(ele)
 
 
@@ -273,13 +288,11 @@ class AstNodeX(AstNode):
         parent.appendChild(attribute_ele)
 
 
-    @expr_wrapper
     def c_Index(self, parent):
         ele = Element('Index')
         self.fields['value'].value.to_xml(ele)
         parent.appendChild(ele)
 
-    @expr_wrapper
     def c_Slice(self, parent):
         ele = Element('Slice')
         parent.appendChild(ele)
@@ -332,7 +345,7 @@ class AstNodeX(AstNode):
 
         # slice
         ele_slice = Element('slice')
-        assert self.tokens.pop().exact_type == Token.LSQB
+        assert self.tokens.pop().exact_type == Token.LSQB, self.tokens.current
         ele_slice.appendChild(DOM.Text(self.tokens.text_prev2next()))
         self.fields['slice'].value.to_xml(ele_slice)
         assert self.tokens.pop().exact_type == Token.RSQB
@@ -546,8 +559,8 @@ class AstNodeX(AstNode):
             ele_comp = Element('comprehension')
             ele_gen.appendChild(ele_comp)
             # for
-            assert self.tokens.pop().string == 'for'
-            ele_comp.appendChild(DOM.Text(self.tokens.text_prev2next()))
+            for_text = self.pop_merge_NL(lspace=True) # for
+            ele_comp.appendChild(DOM.Text(for_text))
             # target
             ele_target = Element('target')
             gen.fields['target'].value.to_xml(ele_target)
@@ -569,8 +582,8 @@ class AstNodeX(AstNode):
                     ele_if = Element('if')
                     ele_ifs.appendChild(ele_if)
                     # if
-                    assert self.tokens.pop().string == 'if'
-                    ele_if.appendChild(DOM.Text(self.tokens.text_prev2next()))
+                    if_text = self.pop_merge_NL(lspace=True) # if
+                    ele_if.appendChild(DOM.Text(if_text))
                     # target
                     gif.to_xml(ele_if)
 
@@ -819,7 +832,7 @@ class AstNodeX(AstNode):
             defaults = ([None] * (len(args) - len(f_defaults))) + f_defaults
             args_ele = Element('args')
             for arg, default in zip(args, defaults):
-                assert self.tokens.pop().type == Token.NAME
+                assert self.tokens.pop().type == Token.NAME, self.tokens.current
                 arg_ele = self._arg_element(arg)
                 if default:
                     assert self.tokens.pop().exact_type == Token.EQUAL
@@ -917,35 +930,40 @@ class AstNodeX(AstNode):
         text = self.tokens.prev_space() + name
         ele.appendChild(DOM.Text(text))
 
+        token = self.tokens.pop()
         # arguments
-        assert self.tokens.pop().exact_type == Token.LPAR
-        start_arguments_text = self.tokens.text_prev2next()
-        arguments_ele = Element('arguments', text=start_arguments_text)
+        if token.exact_type == Token.LPAR:
+            start_arguments_text = self.tokens.text_prev2next()
+            arguments_ele = Element('arguments', text=start_arguments_text)
 
-        bases = self.fields['bases'].value
-        if bases:
-            bases_ele = Element('bases')
-            for item in bases:
-                item.to_xml(bases_ele)
-                self._c_delimiter(bases_ele, (Token.COMMA, Token.NL))
-            arguments_ele.appendChild(bases_ele)
+            bases = self.fields['bases'].value
+            if bases:
+                bases_ele = Element('bases')
+                for item in bases:
+                    item.to_xml(bases_ele)
+                    self._c_delimiter(bases_ele, (Token.COMMA, Token.NL))
+                arguments_ele.appendChild(bases_ele)
 
 
-        if self.fields['keywords'].value:
-            raise NotImplementedError()
-        if self.fields['starargs'].value:
-            raise NotImplementedError()
-        if self.fields['kwargs'].value:
-            raise NotImplementedError()
-        if self.fields['decorator_list'].value:
-            raise NotImplementedError()
+            if self.fields['keywords'].value:
+                raise NotImplementedError()
+            if self.fields['starargs'].value:
+                raise NotImplementedError()
+            if self.fields['kwargs'].value:
+                raise NotImplementedError()
+            if self.fields['decorator_list'].value:
+                raise NotImplementedError()
 
-        # close arguments
-        assert self.tokens.pop().exact_type == Token.RPAR
-        arguments_ele.appendChild(DOM.Text(')'))
-        assert self.tokens.pop().exact_type == Token.COLON
-        arguments_ele.appendChild(DOM.Text(self.tokens.prev_space() + ':'))
-        ele.appendChild(arguments_ele)
+            # close arguments
+            assert self.tokens.pop().exact_type == Token.RPAR
+            arguments_ele.appendChild(DOM.Text(')'))
+            ele.appendChild(arguments_ele)
+            # get colon
+            token = self.tokens.pop()
+
+        # colon
+        assert token.exact_type == Token.COLON
+        ele.appendChild(DOM.Text(self.tokens.prev_space() + ':'))
 
         # body
         self._c_field_list(ele, 'body')
@@ -1220,26 +1238,33 @@ def py2xml(filename):
     return root.toxml()
 
 
-def xml2py(xml):
+def xml2py(filename):
     """convert XML back to python
 
-    To convert back just get all text from all nodes.
+    To convert back, just get all text from all nodes.
     """
-    root = ET.fromstring(xml)
-    return ET.tostring(root, encoding='unicode', method='text')
-
+    with open(filename) as fp_in:
+        root = ET.fromstring(fp_in.read())
+        return ET.tostring(root, encoding='unicode', method='text')
 
 
 def main(args=None): # pragma: no cover
     """command line program for py2xml"""
     description = """convert python module to XML representation"""
     parser = argparse.ArgumentParser(description=description)
+    parser.add_argument('-r', '--reverse', dest='reverse',
+                        action='store_true',
+                        help='reverse - convert XML back to python code')
     parser.add_argument(
         'py_file', metavar='MODULE', nargs=1,
         help='python module')
 
     args = parser.parse_args(args)
-    print(py2xml(args.py_file[0]))
+    if args.reverse:
+        print(xml2py(args.py_file[0]), end='')
+    else:
+        print(py2xml(args.py_file[0]), end='')
+
 
 if __name__ == "__main__": # pragma: no cover
     main()

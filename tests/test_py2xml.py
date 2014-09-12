@@ -3,7 +3,7 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
-from pyreg.py2xml import py2xml, xml2py
+from pyreg.py2xml import py2xml
 
 
 @pytest.fixture
@@ -74,6 +74,9 @@ class TestTuple:
     def test_tuple(self, s2xml):
         assert s2xml('1,2,3') == '<Expr><Tuple ctx="Load"><Num>1</Num>'\
             ',<Num>2</Num>,<Num>3</Num></Tuple></Expr>'
+
+    def test_empty(self, s2xml):
+        assert s2xml('()') == '<Expr><Tuple ctx="Load">()</Tuple></Expr>'
 
     def test_tuple_space(self, s2xml):
         assert s2xml('1, 2 ,  3') == '<Expr><Tuple ctx="Load">'\
@@ -266,6 +269,12 @@ class TestBinOp:
         assert s2xml('( 2+ (3 )  )') == \
             '<Expr>( <BinOp><Num>2</Num><Add>+ </Add>(<Num>3</Num>'\
             ' )</BinOp>  )</Expr>'
+
+    def test_expr_parenthesis_first_ele(self, s2xml):
+        assert s2xml('(1) + 2') == \
+            '<Expr><BinOp>(<Num>1</Num>)<Add> + </Add><Num>2</Num>'\
+            '</BinOp></Expr>'
+
 
 
 class TestBoolOp:
@@ -469,6 +478,25 @@ class TestListComp:
             ' in <iter><Name ctx="Load" name="d">d</Name></iter>'\
             '</comprehension></generators>]</ListComp></Expr>'
 
+    def test_listcomp_multiline_on_if(self, s2xml):
+        assert s2xml('[a for a in b\n if a]') == \
+            '<Expr><ListComp>[<elt><Name ctx="Load" name="a">a</Name></elt>'\
+            '<generators><comprehension> for '\
+            '<target><Name ctx="Store" name="a">a</Name></target>'\
+            ' in <iter><Name ctx="Load" name="b">b</Name></iter>'\
+            '<ifs><if>\n if <Name ctx="Load" name="a">a</Name></if></ifs>'\
+            '</comprehension></generators>]</ListComp></Expr>'
+
+    def test_listcomp_multiline_on_for(self, s2xml):
+        assert s2xml('[a\n for a in b if a]') == \
+            '<Expr><ListComp>[<elt><Name ctx="Load" name="a">a</Name></elt>'\
+            '<generators><comprehension>\n for '\
+            '<target><Name ctx="Store" name="a">a</Name></target>'\
+            ' in <iter><Name ctx="Load" name="b">b</Name></iter>'\
+            '<ifs><if> if <Name ctx="Load" name="a">a</Name></if></ifs>'\
+            '</comprehension></generators>]</ListComp></Expr>'
+
+
 
 class TestGeneratorExp:
     def test_generatorexp(self, s2xml):
@@ -605,14 +633,19 @@ class TestFuncDef:
 class TestClassDef:
     def test_classdef(self, s2xml):
         assert s2xml('class Foo (  ) :\n    pass') == \
-            '<ClassDef name="Foo">class Foo<arguments> (  ) :</arguments>'\
+            '<ClassDef name="Foo">class Foo<arguments> (  )</arguments> :'\
             '<body>\n    <Pass>pass</Pass></body></ClassDef>'
 
     def test_classdef_bases(self, s2xml):
         assert s2xml('class Foo (Base) :\n    pass') == \
             '<ClassDef name="Foo">class Foo<arguments> ('\
             '<bases><Name ctx="Load" name="Base">Base</Name></bases>'\
-            ') :</arguments>'\
+            ')</arguments> :'\
+            '<body>\n    <Pass>pass</Pass></body></ClassDef>'
+
+    def test_classdef_no_args(self, s2xml):
+        assert s2xml('class Foo :\n    pass') == \
+            '<ClassDef name="Foo">class Foo :'\
             '<body>\n    <Pass>pass</Pass></body></ClassDef>'
 
 
@@ -924,7 +957,3 @@ class TestNonLocal:
             '<name>a</name>'\
             ' , <name>b</name>'\
             '</names></Nonlocal>'
-
-
-def test_xml2py():
-    assert xml2py('<a>x<b>y</b>z</a>') == 'xyz'
