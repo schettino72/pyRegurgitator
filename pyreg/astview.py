@@ -120,9 +120,9 @@ class AstNode(object):
     @classmethod
     def tree(cls, filename):
         """build whole AST from a module"""
-        with open(filename, 'r') as fp:
+        with open(filename, 'rb') as fp:
             ct = ast.parse(fp.read(), filename)
-        with open(filename, 'r') as fp:
+        with open(filename, 'rb') as fp:
             lines = fp.readlines()
         return cls(ct, '', lines, None)
 

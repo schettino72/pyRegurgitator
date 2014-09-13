@@ -352,18 +352,24 @@ class AstNodeX(AstNode):
             upper.to_xml(ele_upper)
             ele.appendChild(ele_upper)
 
+        if self.tokens.next().exact_type == Token.COLON:
+            colon2_text = self.pop_merge_NL(lspace=True, rspace=False)
+            ele.appendChild(DOM.Text(colon2_text)) # COLON
+
         # step
         step = self.fields['step'].value
         if step:
-            ele.appendChild(DOM.Text(self.pop_merge_NL(lspace=True))) # COLON
+            ele.appendChild(DOM.Text(self.tokens.prev_space()))
             ele_step = Element('step')
             step.to_xml(ele_step)
             ele.appendChild(ele_step)
 
 
     def c_ExtSlice(self, parent):
-        raise NotImplementedError()
-
+        dims = self.fields['dims'].value
+        for item in dims:
+            item.to_xml(parent)
+            self._c_delimiter(parent)
 
 
     @expr_wrapper
@@ -435,8 +441,9 @@ class AstNodeX(AstNode):
     @expr_wrapper
     def c_UnaryOp(self, parent):
         self.tokens.pop() # operator can be an OP or NAME
-        op_text = self.tokens.current.string + self.tokens.space_right()
+        op_text = self.tokens.current.string
         ele = Element(self.class_, text=op_text)
+        self.tokens.write_non_ast_tokens(ele)
         ele.setAttribute('op', self.fields['op'].value.class_)
         self.fields['operand'].value.to_xml(ele)
         parent.appendChild(ele)
@@ -887,8 +894,14 @@ class AstNodeX(AstNode):
         if kwonly:
             arg_ele.setAttribute('kwonly', None)
 
-        if arg.fields['annotation'].value:
-            raise NotImplementedError()
+        ann = arg.fields['annotation'].value
+        if ann:
+            assert self.tokens.pop().exact_type == Token.COLON
+            ann_ele = Element('annotation')
+            ann_text = self.tokens.text_prev2next()
+            ann_ele.appendChild(DOM.Text(ann_text))
+            ann.to_xml(ann_ele)
+            arg_ele.appendChild(ann_ele)
 
         # keyword_only arg might not have a default None instead of an ast node
         if hasattr(default, 'fields'):
@@ -955,14 +968,13 @@ class AstNodeX(AstNode):
 
     def _c_decorator_list(self, parent):
         decorators = self.fields['decorator_list'].value
-        if decorators:
-            for deco in decorators:
-                assert self.tokens.pop().exact_type == Token.AT
-                deco_text = '@' + self.tokens.space_right()
-                ele_deco = Element('decorator', text=deco_text)
-                parent.appendChild(ele_deco)
-                deco.to_xml(ele_deco)
-                self.tokens.write_non_ast_tokens(parent)
+        for deco in decorators:
+            assert self.tokens.pop().exact_type == Token.AT
+            deco_text = '@' + self.tokens.space_right()
+            ele_deco = Element('decorator', text=deco_text)
+            parent.appendChild(ele_deco)
+            deco.to_xml(ele_deco)
+            self.tokens.write_non_ast_tokens(parent)
 
 
     def c_FunctionDef(self, parent):
@@ -989,18 +1001,27 @@ class AstNodeX(AstNode):
 
         # close parent + colon
         assert self.tokens.pop().exact_type == Token.RPAR
-        close_args_text = ')'
-        assert self.tokens.pop().exact_type == Token.COLON
-        close_args_text += self.tokens.prev_space() + ':'
+        close_args_text = ')' + self.tokens.space_right()
         ele_arguments.appendChild(DOM.Text(close_args_text))
+
+        returns = self.fields['returns'].value
+        if returns:
+            assert self.tokens.pop().type == Token.OP # ->
+            arrow_text = '->' + self.tokens.space_right()
+            ele_returns = Element('returns', text=arrow_text)
+            ele_arguments.appendChild(ele_returns)
+            returns.to_xml(ele_returns)
+            ele_returns.appendChild(DOM.Text(self.tokens.space_right()))
+
+        # colon
+        assert self.tokens.pop().exact_type == Token.COLON
+        colon_text = ':'
+        ele_arguments.appendChild(DOM.Text(colon_text))
         ele.appendChild(ele_arguments)
 
         # body
         self._c_field_list(ele, 'body')
         parent.appendChild(ele)
-
-        if self.fields['returns'].value:
-            raise NotImplementedError()
 
 
     def c_ClassDef(self, parent):
@@ -1028,13 +1049,11 @@ class AstNodeX(AstNode):
             ele_arguments = Element('arguments', text=start_arguments_text)
 
             bases = self.fields['bases'].value
-            if bases:
-                for item in bases:
-                    ele_base = Element('base')
-                    item.to_xml(ele_base)
-                    ele_arguments.appendChild(ele_base)
-                    self._c_delimiter(ele_arguments)
-
+            for item in bases:
+                ele_base = Element('base')
+                item.to_xml(ele_base)
+                ele_arguments.appendChild(ele_base)
+                self._c_delimiter(ele_arguments)
 
             self._c_call_keywords_starargs(ele_arguments)
 

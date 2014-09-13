@@ -285,6 +285,13 @@ class TestSubscript:
             '<slice>[<Slice>: : <step><Num>3</Num></step></Slice> ]</slice>'\
             '</Subscript></Expr>'
 
+    def test_slice_second_colon_without_step(self, s2xml):
+        assert s2xml('foo[1:: ]') == \
+            '<Expr><Subscript ctx="Load">'\
+            '<value><Name ctx="Load" name="foo">foo</Name></value>'\
+            '<slice>[<Slice><lower><Num>1</Num></lower>::</Slice> ]</slice>'\
+            '</Subscript></Expr>'
+
     def test_slice_multiline(self, s2xml):
         assert s2xml('foo[\n 1 :\n 3 \n]') == \
             '<Expr><Subscript ctx="Load">'\
@@ -292,6 +299,16 @@ class TestSubscript:
             '<slice>[\n <Slice><lower><Num>1</Num></lower> :\n '\
             '<upper><Num>3</Num></upper></Slice> \n]</slice>'\
             '</Subscript></Expr>'
+
+    def test_slice_extended(self, s2xml):
+        assert s2xml('ex1[1:3:, ::2]') == \
+            '<Expr><Subscript ctx="Load">'\
+            '<value><Name ctx="Load" name="ex1">ex1</Name></value>'\
+            '<slice>[<Slice><lower><Num>1</Num></lower>:'\
+            '<upper><Num>3</Num></upper>:</Slice>, '\
+            '<Slice>::<step><Num>2</Num></step></Slice>]</slice>'\
+            '</Subscript></Expr>'
+
 
 
 class TestBinOp:
@@ -388,6 +405,13 @@ class TestUnaryOp:
             '<Expr><UnaryOp op="USub">'\
             '- <Num>2</Num>'\
             '</UnaryOp></Expr>'
+
+    def test_unary_multiline(self, s2xml):
+        assert s2xml('(not\n 2)') == \
+            '<Expr>(<UnaryOp op="Not">'\
+            'not\n <Num>2</Num>'\
+            '</UnaryOp>)</Expr>'
+
 
 class TestCompare:
     def test_compare(self, s2xml):
@@ -777,6 +801,12 @@ class TestFuncDef:
             '):</arguments>'\
             '<body>\n    <Pass>pass</Pass></body></FunctionDef>'
 
+    def test_funcdef_annotation(self, s2xml):
+        assert s2xml('def test(a:"spam") -> "ham": pass') == \
+            '<FunctionDef name="test">def test<arguments>('\
+            '<arg name="a">a<annotation>:<Str><s>"spam"</s></Str></annotation>'\
+            '</arg>) <returns>-&gt; <Str><s>"ham"</s></Str></returns>'\
+            ':</arguments><body> <Pass>pass</Pass></body></FunctionDef>'
 
 
 class TestClassDef:
