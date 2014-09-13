@@ -124,7 +124,8 @@ class AstNode(object):
             ct = ast.parse(fp.read(), filename)
         with open(filename, 'rb') as fp:
             lines = fp.readlines()
-        return cls(ct, '', lines, None)
+            cls.line_list = lines
+        return cls(ct, '', [l.decode('utf-8') for l in lines], None)
 
     @classmethod
     def load_map(cls):
@@ -242,13 +243,14 @@ def ast2html(filename, tree):
     AstNode.load_map()
 
     # ready to generate the HTML
-    print(template.render(filename=filename, tree=tree))
+    return template.render(filename=filename, tree=tree)
 
 
 
 
 def ast_view(args=None):
     """command line program to convert python module into AST data"""
+    import sys
     description = """
 Super pretty-printer for python modules's AST(abstract syntax tree)."""
 
@@ -264,7 +266,8 @@ Super pretty-printer for python modules's AST(abstract syntax tree)."""
     args = parser.parse_args(args)
     tree = AstNode.tree(args.py_file[0])
     if args.format == 'html':
-        ast2html(args.py_file[0], tree)
+        html = ast2html(args.py_file[0], tree)
+        sys.stdout.buffer.write(html.encode('utf8'))
     elif args.format == 'map':
         for x in tree.to_map():
             print(x)

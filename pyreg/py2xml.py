@@ -31,6 +31,17 @@ def Element(tag_name, text=None):
     return ele
 
 
+def pos_byte2str(s):
+    """return a list where the element value is the characther index/pos
+    in the string from the byte position
+    """
+    pos_map = []
+    for index, c in enumerate(s):
+        pos_map.extend([index] * len(c.encode('utf-8')))
+    return pos_map
+
+
+
 class AstNodeX(AstNode):
     """add capability to AstNode be convert to XML"""
 
@@ -59,7 +70,22 @@ class AstNodeX(AstNode):
         if self.class_ == 'BinOp':
             first = self.fields['left'].value
             return first.real_start()
-        return (self.line, self.column)
+        if self.class_ == 'Call':
+            first = self.fields['func'].value
+            return first.real_start()
+
+        # AST node shows column in as byte position,
+        # convert to char position in unicode string
+        line_byte = self.line_list[self.line-1]
+        try:
+            line_uni = line_byte.decode('utf-8')
+        except:
+            raise Exception(line_byte)
+        if len(line_byte) != len(line_uni):
+            column = pos_byte2str(line_uni)[self.column]
+        else:
+            column = self.column
+        return (self.line, column)
 
     ###########################################################
     # expr
@@ -102,6 +128,7 @@ class AstNodeX(AstNode):
             # check if the paren is closing this node
             if has_rparen and self.tokens.lpar:
                 lpar_text, start, node = self.tokens.lpar[-1]
+                #print(self.class_, start, self.real_start())
                 if start == self.real_start() or node is self:
                     close_paren = True
                 else:
@@ -315,7 +342,7 @@ class AstNodeX(AstNode):
         self.fields['value'].value.to_xml(value_ele)
         attribute_ele.appendChild(value_ele)
         # dot
-        text = self.pop_merge_NL()
+        text = self.pop_merge_NL(lspace=True)
         attribute_ele.appendChild(DOM.Text(text))
         # attr name
         assert self.tokens.pop().type == Token.NAME, self.tokens.current
@@ -492,8 +519,7 @@ class AstNodeX(AstNode):
         ele_arg = Element('arg', text=keyword.fields['arg'].value)
         ele_keyword.appendChild(ele_arg)
         # equal
-        assert self.tokens.pop().exact_type == Token.EQUAL
-        ele_keyword.appendChild(DOM.Text(self.tokens.text_prev2next()))
+        ele_keyword.appendChild(DOM.Text(self.pop_merge_NL(lspace=True)))
         # value
         ele_val = Element('value')
         keyword.fields['value'].value.to_xml(ele_val)
@@ -1042,10 +1068,9 @@ class AstNodeX(AstNode):
         text = self.tokens.prev_space() + name
         ele.appendChild(DOM.Text(text))
 
-        token = self.tokens.pop()
         # arguments
-        if token.exact_type == Token.LPAR:
-            start_arguments_text = self.tokens.text_prev2next()
+        if self.tokens.next().exact_type == Token.LPAR:
+            start_arguments_text = self.pop_merge_NL(lspace=True)
             ele_arguments = Element('arguments', text=start_arguments_text)
 
             bases = self.fields['bases'].value
@@ -1065,11 +1090,9 @@ class AstNodeX(AstNode):
             assert self.tokens.pop().exact_type == Token.RPAR
             ele_arguments.appendChild(DOM.Text(')'))
             ele.appendChild(ele_arguments)
-            # get colon
-            token = self.tokens.pop()
 
         # colon
-        assert token.exact_type == Token.COLON
+        assert self.tokens.pop().exact_type == Token.COLON
         ele.appendChild(DOM.Text(self.tokens.prev_space() + ':'))
 
         # body

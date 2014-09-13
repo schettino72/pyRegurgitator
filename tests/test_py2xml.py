@@ -3,7 +3,19 @@ import xml.etree.ElementTree as ET
 
 import pytest
 
-from pyreg.py2xml import py2xml
+from pyreg.py2xml import pos_byte2str, py2xml
+
+
+class TestFixUnicodeColumnPosition:
+    def test_pos_byte2str(self):
+        s = "coäs"
+        x = pos_byte2str(s)
+        assert x[0] == 0
+        assert x[1] == 1
+        assert x[2] == 2
+        assert x[3] == 2
+        assert x[4] == 3
+
 
 
 @pytest.fixture
@@ -247,6 +259,12 @@ class TestAtrribute:
             '<Expr>(<Attribute ctx="Load">'\
             '<value><Name ctx="Load" name="foo">foo</Name></value>'\
             '\n .<attr>bar</attr></Attribute>)</Expr>'
+
+    def test_attr_space(self, s2xml):
+        assert s2xml('foo .bar') == \
+            '<Expr><Attribute ctx="Load">'\
+            '<value><Name ctx="Load" name="foo">foo</Name></value>'\
+            ' .<attr>bar</attr></Attribute></Expr>'
 
 
 class TestSubscript:
@@ -519,6 +537,13 @@ class TestCall:
         assert s2xml('foo( x = 2 )') == \
             '<Expr><Call><func><Name ctx="Load" name="foo">foo</Name></func>'\
             '( <keyword><arg>x</arg> = <value><Num>2</Num></value>'\
+            '</keyword> )'\
+            '</Call></Expr>'
+
+    def test_call_keyword_multiline(self, s2xml):
+        assert s2xml('foo( x =\n 2 )') == \
+            '<Expr><Call><func><Name ctx="Load" name="foo">foo</Name></func>'\
+            '( <keyword><arg>x</arg> =\n <value><Num>2</Num></value>'\
             '</keyword> )'\
             '</Call></Expr>'
 
@@ -819,6 +844,14 @@ class TestClassDef:
         assert s2xml('class Foo (Base) :\n    pass') == \
             '<ClassDef name="Foo">class Foo<arguments> ('\
             '<base><Name ctx="Load" name="Base">Base</Name></base>'\
+            ')</arguments> :'\
+            '<body>\n    <Pass>pass</Pass></body></ClassDef>'
+
+    def test_classdef_bases_multiline(self, s2xml):
+        assert s2xml('class Foo (\n Base,\n Base2) :\n    pass') == \
+            '<ClassDef name="Foo">class Foo<arguments> (\n '\
+            '<base><Name ctx="Load" name="Base">Base</Name></base>,\n '\
+            '<base><Name ctx="Load" name="Base2">Base2</Name></base>'\
             ')</arguments> :'\
             '<body>\n    <Pass>pass</Pass></body></ClassDef>'
 
@@ -1212,6 +1245,7 @@ class TestNonLocal:
             '</names></Nonlocal>'
 
 
+
 class TestBugs:
     def test_expr_parenthesis_complex(self, s2xml):
         assert s2xml('str((1-2)*23//10)') == \
@@ -1230,7 +1264,16 @@ class TestBugs:
 
     def test_more_binop_attr(self, s2xml):
         assert s2xml('((bytes[0]<<4) + (bytes<<1) - (bytes<<8) + bytes)') == \
-            '<Expr>(<BinOp><BinOp><BinOp>(<BinOp><Subscript ctx="Load"><value><Name ctx="Load" name="bytes">bytes</Name></value><slice>[<Index><Num>0</Num></Index>]</slice></Subscript><LShift>&lt;&lt;</LShift><Num>4</Num></BinOp>)<Add> + </Add>(<BinOp><Name ctx="Load" name="bytes">bytes</Name><LShift>&lt;&lt;</LShift><Num>1</Num></BinOp>)</BinOp><Sub> - </Sub>(<BinOp><Name ctx="Load" name="bytes">bytes</Name><LShift>&lt;&lt;</LShift><Num>8</Num></BinOp>)</BinOp><Add> + </Add><Name ctx="Load" name="bytes">bytes</Name></BinOp>)</Expr>'
+            '<Expr>(<BinOp><BinOp><BinOp>(<BinOp><Subscript ctx="Load">'\
+            '<value><Name ctx="Load" name="bytes">bytes</Name></value><slice>'\
+            '[<Index><Num>0</Num></Index>]</slice></Subscript>'\
+            '<LShift>&lt;&lt;</LShift><Num>4</Num></BinOp>)<Add> + </Add>'\
+            '(<BinOp><Name ctx="Load" name="bytes">bytes</Name>'\
+            '<LShift>&lt;&lt;</LShift><Num>1</Num></BinOp>)</BinOp>'\
+            '<Sub> - </Sub>(<BinOp><Name ctx="Load" name="bytes">bytes</Name>'\
+            '<LShift>&lt;&lt;</LShift><Num>8</Num></BinOp>)</BinOp>'\
+            '<Add> + </Add><Name ctx="Load" name="bytes">bytes</Name>'\
+            '</BinOp>)</Expr>'
 
     def test_elif_prev_space(self, s2xml):
         assert s2xml('if 0:\n    if 1: 2\n    elif 3: 4') == \
@@ -1241,3 +1284,22 @@ class TestBugs:
             '<body> <Expr><Num>4</Num></Expr></body></If></orelse>'\
             '</If></body></If>'
 
+    def test_elif_prev_space(self, s2xml):
+        assert s2xml('("colä", lambda x, y: (x > y) - (x < y))') == \
+            '<Expr>(<Tuple ctx="Load"><Str><s>"colä"</s></Str>, '\
+            '<Lambda>lambda <arguments><arg name="x">x</arg>, '\
+            '<arg name="y">y</arg></arguments>: <body>'\
+            '<BinOp>(<Compare><value><Name ctx="Load" name="x">x</Name>'\
+            '</value><cmpop> &gt; </cmpop><value><Name ctx="Load" name="y">'\
+            'y</Name></value></Compare>)<Sub> - </Sub>(<Compare><value>'\
+            '<Name ctx="Load" name="x">x</Name></value><cmpop> &lt; </cmpop>'\
+            '<value><Name ctx="Load" name="y">y</Name></value></Compare>'\
+            ')</BinOp></body></Lambda></Tuple>)</Expr>'
+
+    def test_attr_par(self, s2xml):
+        assert s2xml('(chr(i) + "A").splitlines') == \
+            '<Expr><Attribute ctx="Load"><value>('\
+            '<BinOp><Call><func><Name ctx="Load" name="chr">chr</Name></func>'\
+            '(<args><Name ctx="Load" name="i">i</Name></args>)</Call>'\
+            '<Add> + </Add><Str><s>"A"</s></Str></BinOp>)</value>.<attr>'\
+            'splitlines</attr></Attribute></Expr>'
