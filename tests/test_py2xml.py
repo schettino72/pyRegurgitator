@@ -279,6 +279,14 @@ class TestSubscript:
             '<slice>[<Slice>: : <step><Num>3</Num></step></Slice> ]</slice>'\
             '</Subscript></Expr>'
 
+    def test_slice_multiline(self, s2xml):
+        assert s2xml('foo[ 1 :\n 3 ]') == \
+            '<Expr><Subscript ctx="Load">'\
+            '<value><Name ctx="Load" name="foo">foo</Name></value>'\
+            '<slice>[ <Slice><lower><Num>1</Num></lower> :\n '\
+            '<upper><Num>3</Num></upper></Slice> ]</slice>'\
+            '</Subscript></Expr>'
+
 
 class TestBinOp:
     def test_binop_add(self, s2xml):
@@ -480,16 +488,16 @@ class TestCall:
     def test_call_keyword(self, s2xml):
         assert s2xml('foo( x = 2 )') == \
             '<Expr><Call><func><Name ctx="Load" name="foo">foo</Name></func>'\
-            '( <keywords><keyword><arg>x</arg> = <value><Num>2</Num></value>'\
-            '</keyword> </keywords>)'\
+            '( <keyword><arg>x</arg> = <value><Num>2</Num></value>'\
+            '</keyword> )'\
             '</Call></Expr>'
 
     def test_call_arg_keyword(self, s2xml):
         assert s2xml('foo(1, x=2)') == \
             '<Expr><Call><func><Name ctx="Load" name="foo">foo</Name></func>'\
             '(<args><Num>1</Num>, </args>'\
-            '<keywords><keyword><arg>x</arg>=<value><Num>2</Num></value>'\
-            '</keyword></keywords>)'\
+            '<keyword><arg>x</arg>=<value><Num>2</Num></value>'\
+            '</keyword>)'\
             '</Call></Expr>'
 
     def test_call_starargs(self, s2xml):
@@ -503,6 +511,23 @@ class TestCall:
             '<Expr><Call><func><Name ctx="Load" name="foo">foo</Name></func>'\
             '(<kwargs>**<Name ctx="Load" name="a">a</Name></kwargs>)'\
             '</Call></Expr>'
+
+    def test_call_paramenter_order(self, s2xml):
+        assert s2xml('foo(*a, b=1, **c)') == \
+            '<Expr><Call><func><Name ctx="Load" name="foo">foo</Name></func>('\
+            '<starargs>*<Name ctx="Load" name="a">a</Name></starargs>, '\
+            '<keyword><arg>b</arg>=<value><Num>1</Num></value></keyword>, '\
+            '<kwargs>**<Name ctx="Load" name="c">c</Name></kwargs>)'\
+            '</Call></Expr>'
+
+
+    def test_call_keywords_before_after_starargs(self, s2xml):
+        assert s2xml('foo(a=1, *b, c=2)') == \
+            '<Expr><Call><func><Name ctx="Load" name="foo">foo</Name></func>('\
+            '<keyword><arg>a</arg>=<value><Num>1</Num></value></keyword>, '\
+            '<starargs>*<Name ctx="Load" name="b">b</Name></starargs>, '\
+            '<keyword><arg>c</arg>=<value><Num>2</Num></value></keyword>'\
+            ')</Call></Expr>'
 
 
 class TestListComp:
@@ -643,12 +668,12 @@ class TestFuncDef:
 
     def test_funcdef_decorator(self, s2xml):
         assert s2xml('@foodeco #1\n@deco2 #2\ndef four (  ):\n    4') == \
-            '<FunctionDef name="four"><decorators>'\
+            '<FunctionDef name="four">'\
             '<decorator>@<Name ctx="Load" name="foodeco">'\
             'foodeco</Name></decorator> #1\n'\
             '<decorator>@<Name ctx="Load" name="deco2">'\
             'deco2</Name></decorator> #2\n'\
-            '</decorators>def four<arguments> (  ):</arguments>'\
+            'def four<arguments> (  ):</arguments>'\
             '<body>\n    <Expr><Num>4</Num></Expr></body></FunctionDef>'
 
     def test_funcdef_arg(self, s2xml):
@@ -718,6 +743,16 @@ class TestFuncDef:
             '):</arguments>'\
             '<body>\n    <Pass>pass</Pass></body></FunctionDef>'
 
+    def test_funcdef_kwonly_kwarg(self, s2xml):
+        assert s2xml('def foo(*a, b= 5, **c):\n    pass') == \
+            '<FunctionDef name="foo">def foo'\
+            '<arguments>('\
+            '<vararg>*<arg name="a">a</arg></vararg>, '\
+            '<arg kwonly="" name="b">b<default>= <Num>5</Num></default></arg>'\
+            ', <kwarg>**<arg name="c">c</arg></kwarg>'\
+            '):</arguments>'\
+            '<body>\n    <Pass>pass</Pass></body></FunctionDef>'
+
     def test_funcdef_kwonly_no_vararg(self, s2xml):
         assert s2xml('def foo(*, b= 5):\n    pass') == \
             '<FunctionDef name="foo">def foo'\
@@ -738,8 +773,16 @@ class TestClassDef:
     def test_classdef_bases(self, s2xml):
         assert s2xml('class Foo (Base) :\n    pass') == \
             '<ClassDef name="Foo">class Foo<arguments> ('\
-            '<bases><Name ctx="Load" name="Base">Base</Name></bases>'\
+            '<base><Name ctx="Load" name="Base">Base</Name></base>'\
             ')</arguments> :'\
+            '<body>\n    <Pass>pass</Pass></body></ClassDef>'
+
+    def test_classdef_dcorator(self, s2xml):
+        assert s2xml('@deco\nclass Foo():\n    pass') == \
+            '<ClassDef name="Foo">'\
+            '<decorator>@<Name ctx="Load" name="deco">'\
+            'deco</Name></decorator>\n'\
+            'class Foo<arguments>()</arguments>:'\
             '<body>\n    <Pass>pass</Pass></body></ClassDef>'
 
     def test_classdef_no_args(self, s2xml):
@@ -753,6 +796,18 @@ class TestClassDef:
             '<keyword><arg>bar</arg>=<value><Num>1</Num></value></keyword>'\
             ')</arguments> :'\
             '<body>\n    <Pass>pass</Pass></body></ClassDef>'
+
+    def test_classdef_all_args(self, s2xml):
+        class_def = 'class Foo(Base, xx=1, *aa, yy=2, **dd): pass'
+        assert s2xml(class_def) == \
+            '<ClassDef name="Foo">class Foo<arguments>('\
+            '<base><Name ctx="Load" name="Base">Base</Name></base>, '\
+            '<keyword><arg>xx</arg>=<value><Num>1</Num></value></keyword>, '\
+            '<starargs>*<Name ctx="Load" name="aa">aa</Name></starargs>, '\
+            '<keyword><arg>yy</arg>=<value><Num>2</Num></value></keyword>, '\
+            '<kwargs>**<Name ctx="Load" name="dd">dd</Name></kwargs>'\
+            ')</arguments>:'\
+            '<body> <Pass>pass</Pass></body></ClassDef>'
 
 
 
@@ -1122,3 +1177,9 @@ class TestBugs:
             '(<BinOp><BinOp><Num>1</Num><Add> + </Add><Num>2</Num></BinOp>'\
             '<Add> + </Add><Num>3</Num></BinOp>)'\
             '</value>.<attr>bit_len</attr></Attribute></Expr>'
+
+    def test_more_binop_attr(self, s2xml):
+        assert s2xml('((bytes[0]<<4) + (bytes<<1) - (bytes<<8) + bytes)') == \
+            '<Expr>(<BinOp><BinOp><BinOp>(<BinOp><Subscript ctx="Load"><value><Name ctx="Load" name="bytes">bytes</Name></value><slice>[<Index><Num>0</Num></Index>]</slice></Subscript><LShift>&lt;&lt;</LShift><Num>4</Num></BinOp>)<Add> + </Add>(<BinOp><Name ctx="Load" name="bytes">bytes</Name><LShift>&lt;&lt;</LShift><Num>1</Num></BinOp>)</BinOp><Sub> - </Sub>(<BinOp><Name ctx="Load" name="bytes">bytes</Name><LShift>&lt;&lt;</LShift><Num>8</Num></BinOp>)</BinOp><Add> + </Add><Name ctx="Load" name="bytes">bytes</Name></BinOp>)</Expr>'
+
+

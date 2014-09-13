@@ -4,7 +4,6 @@ from tokenize import tokenize
 import tokenize as Token
 import xml.etree.ElementTree as ET
 from xml.dom.minidom import getDOMImplementation, Text
-import logging as log
 
 from .astview import AstNode
 
@@ -19,8 +18,6 @@ def _monkey_writexml(self, writer, indent="", addindent="", newl=""):
 Text.writexml = _monkey_writexml
 ##############################################################
 
-
-#log.basicConfig(level=log.DEBUG)
 
 
 # create DOM Document
@@ -56,12 +53,12 @@ class AstNodeX(AstNode):
 
     def real_start(self):
         """Because of http://bugs.python.org/issue18374"""
-        if self.class_ == 'Attribute':
+        if self.class_ in ('Attribute', 'Subscript'):
             first = self.fields['value'].value
-            return (first.line, first.column)
+            return first.real_start()
         if self.class_ == 'BinOp':
             first = self.fields['left'].value
-            return (first.line, first.column)
+            return first.real_start()
         return (self.line, self.column)
 
     ###########################################################
@@ -345,8 +342,7 @@ class AstNodeX(AstNode):
             ele.appendChild(DOM.Text(self.tokens.space_right()))
 
         # first colon
-        assert self.tokens.pop().exact_type == Token.COLON
-        ele.appendChild(DOM.Text(':'))
+        ele.appendChild(DOM.Text(self.pop_merge_NL(rspace=False)))
 
         # upper
         upper = self.fields['upper'].value
@@ -359,8 +355,7 @@ class AstNodeX(AstNode):
         # step
         step = self.fields['step'].value
         if step:
-            assert self.tokens.pop().exact_type == Token.COLON
-            ele.appendChild(DOM.Text(self.tokens.text_prev2next()))
+            ele.appendChild(DOM.Text(self.pop_merge_NL(lspace=True))) # COLON
             ele_step = Element('step')
             step.to_xml(ele_step)
             ele.appendChild(ele_step)
@@ -484,11 +479,11 @@ class AstNodeX(AstNode):
         parent.appendChild(ele)
 
 
-    def _c_keyword(self, parent, keyword):
+    def _c_call_keyword(self, parent, keyword):
         ele_keyword = Element('keyword')
         parent.appendChild(ele_keyword)
         # arg
-        assert self.tokens.pop().type == Token.NAME
+        assert self.tokens.pop().type == Token.NAME, self.tokens.current
         ele_arg = Element('arg', text=keyword.fields['arg'].value)
         ele_keyword.appendChild(ele_arg)
         # equal
@@ -498,6 +493,45 @@ class AstNodeX(AstNode):
         ele_val = Element('value')
         keyword.fields['value'].value.to_xml(ele_val)
         ele_keyword.appendChild(ele_val)
+        self._c_delimiter(parent)
+
+
+    def _c_call_star_arg(self, ele, xarg, field):
+        token = self.tokens.pop()
+        # START DOUBLESTAR
+        assert token.type == Token.OP, self.tokens.current
+        text = token.string + self.tokens.space_right()
+        ele_xargs = Element(field, text=text)
+        xarg.to_xml(ele_xargs)
+        ele.appendChild(ele_xargs)
+        # optional comma
+        self._c_delimiter(ele)
+
+
+    def _c_call_keywords_starargs(self, ele):
+        # keywords args can appear both before and after starargs
+        # so it is required to sort them by position
+        keywds_and_star = []
+
+        # get starargs
+        starargs = self.fields['starargs'].value
+        if starargs:
+            start_pos = (starargs.line, starargs.column)
+            keywds_and_star.append((start_pos, 'starargs', starargs))
+
+        # get keywords
+        keywords = self.fields['keywords'].value
+        for keyword in keywords:
+            kw_val = keyword.fields['value'].value
+            start_pos = (kw_val.line, kw_val.column)
+            keywds_and_star.append((start_pos, 'keyword', keyword))
+
+        # add keywords and starargs
+        for _, atype, arg in sorted(keywds_and_star):
+            if atype == 'starargs':
+                self._c_call_star_arg(ele, arg, 'starargs')
+            else:
+                self._c_call_keyword(ele, arg)
 
 
     @expr_wrapper
@@ -520,26 +554,12 @@ class AstNodeX(AstNode):
                 # optional comma
                 self._c_delimiter(ele_args)
 
-        keywords = self.fields['keywords'].value
-        if keywords:
-            ele_keywords = Element('keywords')
-            ele.appendChild(ele_keywords)
-            for keyword in keywords:
-                self._c_keyword(ele_keywords, keyword)
-                # optional comma
-                self._c_delimiter(ele_keywords)
+        self._c_call_keywords_starargs(ele)
 
-        for field in ('starargs', 'kwargs'):
-            xargs = self.fields[field].value
-            if xargs:
-                token = self.tokens.pop()
-                assert token.type == Token.OP # START DOUBLESTAR
-                text = token.string + self.tokens.space_right()
-                ele_xargs = Element(field, text=text)
-                xargs.to_xml(ele_xargs)
-                ele.appendChild(ele_xargs)
-                # optional comma
-                self._c_delimiter(ele)
+        kwargs = self.fields['kwargs'].value
+        if kwargs:
+            self._c_call_star_arg(ele, kwargs, 'kwargs')
+
         assert self.tokens.pop().exact_type == Token.RPAR, self.tokens.current
         ele.appendChild(DOM.Text(')'))
         parent.appendChild(ele)
@@ -883,6 +903,22 @@ class AstNodeX(AstNode):
         return arg_ele
 
 
+    def _star_arg(self, ele_arguments, arguments, field):
+        """handle vararg and kwarg"""
+        arg = arguments.fields[field].value
+        if arg:
+            ele_arg = Element(field)
+            token = self.tokens.pop()
+             # START / DOUBLESTAR
+            assert token.type == Token.OP, self.tokens.current
+            star_text = token.string
+            ele_arg.appendChild(DOM.Text(star_text))
+            assert self.tokens.pop().type == Token.NAME
+            ele_arg.appendChild(DOM.Text(self.tokens.prev_space()))
+            ele_arg.appendChild(self._arg_element(arg))
+            ele_arguments.appendChild(ele_arg)
+            self._c_delimiter(ele_arguments)
+
     def _arguments(self, ele_arguments):
         """convert arugments for FuncDef and Lambda"""
         arguments = self.fields['args'].value
@@ -897,20 +933,8 @@ class AstNodeX(AstNode):
                 ele_arguments.appendChild(arg_ele)
                 self._c_delimiter(ele_arguments)
 
-        # vararg, kwarg
-        for field in ('vararg', 'kwarg'):
-            arg = arguments.fields[field].value
-            if arg:
-                ele_arg = Element(field)
-                token = self.tokens.pop()
-                assert token.type == Token.OP # START / DOUBLESTAR
-                star_text = token.string
-                ele_arg.appendChild(DOM.Text(star_text))
-                assert self.tokens.pop().type == Token.NAME
-                ele_arg.appendChild(DOM.Text(self.tokens.prev_space()))
-                ele_arg.appendChild(self._arg_element(arg))
-                ele_arguments.appendChild(ele_arg)
-                self._c_delimiter(ele_arguments)
+        # vararg
+        self._star_arg(ele_arguments, arguments, 'vararg')
 
         # kwonlyargs
         kwonlyargs = arguments.fields['kwonlyargs'].value
@@ -926,7 +950,20 @@ class AstNodeX(AstNode):
             ele_arguments.appendChild(arg_ele)
             self._c_delimiter(ele_arguments)
 
+        # kwarg
+        self._star_arg(ele_arguments, arguments, 'kwarg')
 
+
+    def _c_decorator_list(self, parent):
+        decorators = self.fields['decorator_list'].value
+        if decorators:
+            for deco in decorators:
+                assert self.tokens.pop().exact_type == Token.AT
+                deco_text = '@' + self.tokens.space_right()
+                ele_deco = Element('decorator', text=deco_text)
+                parent.appendChild(ele_deco)
+                deco.to_xml(ele_deco)
+                self.tokens.write_non_ast_tokens(parent)
 
 
     def c_FunctionDef(self, parent):
@@ -934,18 +971,7 @@ class AstNodeX(AstNode):
         ele = Element('FunctionDef')
 
         # decorator
-        decorators = self.fields['decorator_list'].value
-        if decorators:
-            ele_decorators = Element('decorators')
-            ele.appendChild(ele_decorators)
-            for deco in decorators:
-                assert self.tokens.pop().exact_type == Token.AT
-                deco_text = '@' + self.tokens.space_right()
-                ele_deco = Element('decorator', text=deco_text)
-                ele_decorators.appendChild(ele_deco)
-                deco.to_xml(ele_deco)
-                self.tokens.write_non_ast_tokens(ele_decorators)
-
+        self._c_decorator_list(ele)
 
         # def
         assert self.tokens.pop().string == 'def'
@@ -980,8 +1006,14 @@ class AstNodeX(AstNode):
 
     def c_ClassDef(self, parent):
         self.tokens.write_non_ast_tokens(parent)
-        ele = Element('ClassDef', text='class')
-        assert self.tokens.pop().type == Token.NAME
+        ele = Element('ClassDef')
+
+        # decorator
+        self._c_decorator_list(ele)
+
+        # class
+        assert self.tokens.pop().string == 'class'
+        ele.appendChild(DOM.Text('class'))
 
         # name
         assert self.tokens.pop().type == Token.NAME
@@ -998,23 +1030,18 @@ class AstNodeX(AstNode):
 
             bases = self.fields['bases'].value
             if bases:
-                bases_ele = Element('bases')
                 for item in bases:
-                    item.to_xml(bases_ele)
-                    self._c_delimiter(bases_ele)
-                ele_arguments.appendChild(bases_ele)
+                    ele_base = Element('base')
+                    item.to_xml(ele_base)
+                    ele_arguments.appendChild(ele_base)
+                    self._c_delimiter(ele_arguments)
 
 
-            for keyword in self.fields['keywords'].value:
-                self._c_keyword(ele_arguments, keyword)
-                self._c_delimiter(ele_arguments)
+            self._c_call_keywords_starargs(ele_arguments)
 
-            if self.fields['starargs'].value:
-                raise NotImplementedError()
-            if self.fields['kwargs'].value:
-                raise NotImplementedError()
-            if self.fields['decorator_list'].value:
-                raise NotImplementedError()
+            kwargs = self.fields['kwargs'].value
+            if kwargs:
+                self._c_call_star_arg(ele_arguments, kwargs, 'kwargs')
 
             # close arguments
             assert self.tokens.pop().exact_type == Token.RPAR
