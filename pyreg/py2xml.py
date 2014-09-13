@@ -192,7 +192,7 @@ class AstNodeX(AstNode):
                 token = self.tokens.list[pos]
                 if token.type == Token.STRING:
                     break
-                elif token.exact_type == Token.NL:
+                elif token.exact_type in (Token.NL, Token.COMMENT):
                     pos -= 1
                 else:
                     continue_string = False
@@ -379,11 +379,9 @@ class AstNodeX(AstNode):
 
         # slice
         ele_slice = Element('slice')
-        assert self.tokens.pop().exact_type == Token.LSQB, self.tokens.current
-        ele_slice.appendChild(DOM.Text(self.tokens.text_prev2next()))
+        ele_slice.appendChild(DOM.Text(self.pop_merge_NL())) # LSQB
         self.fields['slice'].value.to_xml(ele_slice)
-        assert self.tokens.pop().exact_type == Token.RSQB
-        close_text = self.tokens.prev_space() + ']'
+        close_text = self.pop_merge_NL(lspace=True, rspace=False) #RSQB
         ele_slice.appendChild(DOM.Text(close_text))
         sub_ele.appendChild(ele_slice)
 
@@ -650,8 +648,8 @@ class AstNodeX(AstNode):
 
         # close brackets
         if self.class_ != 'GeneratorExp':
-            assert self.tokens.pop().type == Token.OP
-            ele.appendChild(DOM.Text(self.tokens.current.string))
+            close_text = self.pop_merge_NL(lspace=True, rspace=False)
+            ele.appendChild(DOM.Text(close_text))
         parent.appendChild(ele)
 
     c_ListComp = c_GeneratorExp
@@ -892,7 +890,8 @@ class AstNodeX(AstNode):
         if arg.fields['annotation'].value:
             raise NotImplementedError()
 
-        if default:
+        # keyword_only arg might not have a default None instead of an ast node
+        if hasattr(default, 'fields'):
             assert self.tokens.pop().exact_type == Token.EQUAL
             default_ele = Element('default')
             equal_text = self.tokens.text_prev2next()
@@ -1077,14 +1076,14 @@ class AstNodeX(AstNode):
         # orelse
         orelse = self.fields['orelse'].value
         if orelse:
-            self.tokens.write_non_ast_tokens(ele)
+            self.tokens.write_non_ast_tokens(ele, rspace=False)
             if self.tokens.next().string == 'elif':
                 ele_orelse = Element('orelse')
                 orelse[0].to_xml(ele_orelse)
                 ele.appendChild(ele_orelse)
             else:
                 assert self.tokens.pop().string == 'else', self.tokens.current
-                else_text = 'else' + self.tokens.space_right() + ':'
+                else_text = self.tokens.text_prev2next() + ':'
                 assert self.tokens.pop().exact_type == Token.COLON
                 self._c_field_list(ele, 'orelse', text=else_text)
 
@@ -1131,10 +1130,10 @@ class AstNodeX(AstNode):
         self.tokens.write_non_ast_tokens(parent)
         assert self.tokens.pop().string == 'raise'
         ele = Element('Raise', text='raise')
-        ele.appendChild(DOM.Text(self.tokens.space_right()))
         # exc
         exc = self.fields['exc'].value
         if exc:
+            ele.appendChild(DOM.Text(self.tokens.space_right()))
             ele_exc = Element('exc')
             exc.to_xml(ele_exc)
             ele.appendChild(ele_exc)
@@ -1202,7 +1201,7 @@ class AstNodeX(AstNode):
 
         orelse = self.fields['orelse'].value
         if orelse:
-            self.tokens.write_non_ast_tokens(ele)
+            self.tokens.write_non_ast_tokens(ele, rspace=False)
             assert self.tokens.pop().string == 'else', self.tokens.current
             else_text = self.tokens.text_prev2next() + ':'
             assert self.tokens.pop().exact_type == Token.COLON
@@ -1210,7 +1209,7 @@ class AstNodeX(AstNode):
 
         final = self.fields['finalbody'].value
         if final:
-            self.tokens.write_non_ast_tokens(ele)
+            self.tokens.write_non_ast_tokens(ele, rspace=False)
             assert self.tokens.pop().string == 'finally', self.tokens.current
             final_text = self.tokens.text_prev2next() + ':'
             assert self.tokens.pop().exact_type == Token.COLON
@@ -1309,12 +1308,13 @@ class SrcToken:
         Token.COMMENT,
         Token.INDENT, Token.DEDENT,
         ])
-    def write_non_ast_tokens(self, parent_ele):
+    def write_non_ast_tokens(self, parent_ele, rspace=True):
         text = ''
         while self.next().exact_type in self.NON_AST_TOKENS:
             token = self.pop()
             text += self.prev_space() + token.string
-        text += self.space_right()
+        if rspace:
+            text += self.space_right()
         parent_ele.appendChild(DOM.Text(text))
 
 

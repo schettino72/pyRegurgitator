@@ -60,6 +60,12 @@ line 2""" '''
             "<Expr>(<Str><s>'part 1'</s>\n"\
             " <s>' /part 2'</s></Str>)</Expr>"
 
+    def test_str_expr_concat_with_comment(self, s2xml):
+        string = """('part 1' # ho \n ' /part 2')"""
+        assert s2xml(string) == \
+            "<Expr>(<Str><s>'part 1'</s> # ho \n"\
+            " <s>' /part 2'</s></Str>)</Expr>"
+
     def test_bytes(self, s2xml):
         assert s2xml("b'as'") == "<Expr><Bytes><s>b'as'</s></Bytes></Expr>"
 
@@ -255,8 +261,8 @@ class TestSubscript:
         assert s2xml('foo[2] #') == \
             '<Expr><Subscript ctx="Load">'\
             '<value><Name ctx="Load" name="foo">foo</Name></value>'\
-            '<slice>[<Index><Num>2</Num></Index>]</slice>'\
-            '</Subscript></Expr> #'
+            '<slice>[<Index><Num>2</Num></Index>] #</slice>'\
+            '</Subscript></Expr>'
 
     def test_slice_lower(self, s2xml):
         assert s2xml('foo[1 : ]') == \
@@ -280,11 +286,11 @@ class TestSubscript:
             '</Subscript></Expr>'
 
     def test_slice_multiline(self, s2xml):
-        assert s2xml('foo[ 1 :\n 3 ]') == \
+        assert s2xml('foo[\n 1 :\n 3 \n]') == \
             '<Expr><Subscript ctx="Load">'\
             '<value><Name ctx="Load" name="foo">foo</Name></value>'\
-            '<slice>[ <Slice><lower><Num>1</Num></lower> :\n '\
-            '<upper><Num>3</Num></upper></Slice> ]</slice>'\
+            '<slice>[\n <Slice><lower><Num>1</Num></lower> :\n '\
+            '<upper><Num>3</Num></upper></Slice> \n]</slice>'\
             '</Subscript></Expr>'
 
 
@@ -532,12 +538,12 @@ class TestCall:
 
 class TestListComp:
     def test_listcomp(self, s2xml):
-        assert s2xml('[a for a in b]') == \
+        assert s2xml('[a for a in b ]') == \
             '<Expr><ListComp>[<elt><Name ctx="Load" name="a">a</Name></elt>'\
             '<generators><comprehension> for '\
             '<target><Name ctx="Store" name="a">a</Name></target>'\
             ' in <iter><Name ctx="Load" name="b">b</Name></iter>'\
-            '</comprehension></generators>]</ListComp></Expr>'
+            '</comprehension></generators> ]</ListComp></Expr>'
 
     def test_listcomp_ifs(self, s2xml):
         assert s2xml('[a for a in b if a if True]') == \
@@ -561,13 +567,13 @@ class TestListComp:
             '</comprehension></generators>]</ListComp></Expr>'
 
     def test_listcomp_multiline_on_if(self, s2xml):
-        assert s2xml('[a for a in b\n if a]') == \
+        assert s2xml('[a for a in b\n if a\n ]') == \
             '<Expr><ListComp>[<elt><Name ctx="Load" name="a">a</Name></elt>'\
             '<generators><comprehension> for '\
             '<target><Name ctx="Store" name="a">a</Name></target>'\
             ' in <iter><Name ctx="Load" name="b">b</Name></iter>'\
             '<ifs><if>\n if <Name ctx="Load" name="a">a</Name></if></ifs>'\
-            '</comprehension></generators>]</ListComp></Expr>'
+            '</comprehension></generators>\n ]</ListComp></Expr>'
 
     def test_listcomp_multiline_on_in(self, s2xml):
         assert s2xml('[a for a\n in b if a]') == \
@@ -741,6 +747,15 @@ class TestFuncDef:
             '<vararg>*<arg name="a">a</arg></vararg>, '\
             '<arg kwonly="" name="b">b<default>= <Num>5</Num></default></arg>'\
             '):</arguments>'\
+            '<body>\n    <Pass>pass</Pass></body></FunctionDef>'
+
+    def test_funcdef_kwonly_no_default(self, s2xml):
+        assert s2xml('def foo(*a, b ):\n    pass') == \
+            '<FunctionDef name="foo">def foo'\
+            '<arguments>('\
+            '<vararg>*<arg name="a">a</arg></vararg>, '\
+            '<arg kwonly="" name="b">b</arg>'\
+            ' ):</arguments>'\
             '<body>\n    <Pass>pass</Pass></body></FunctionDef>'
 
     def test_funcdef_kwonly_kwarg(self, s2xml):
@@ -1021,8 +1036,8 @@ class TestIf:
         assert s2xml('while 1:\n    if True: pass\n    else: 2') == \
             '<While>while <test><Num>1</Num></test>:<body>\n'\
             '    <If>if <test><NameConstant>True</NameConstant></test>:'\
-            '<body> <Pass>pass</Pass></body>\n    '\
-            '<orelse>else: <Expr><Num>2</Num></Expr></orelse>'\
+            '<body> <Pass>pass</Pass></body>\n'\
+            '<orelse>    else: <Expr><Num>2</Num></Expr></orelse>'\
             '</If></body></While>'
 
 
@@ -1060,6 +1075,11 @@ class TestRaise:
         assert s2xml('raise 2 from a') == \
             '<Raise>raise <exc><Num>2</Num></exc>'\
             ' from <cause><Name ctx="Load" name="a">a</Name></cause></Raise>'
+
+    def test_raise_comment(self, s2xml):
+        assert s2xml('raise # hi') == \
+            '<Raise>raise</Raise> # hi'
+
 
 class TestTry:
     def test_try(self, s2xml):
@@ -1182,4 +1202,12 @@ class TestBugs:
         assert s2xml('((bytes[0]<<4) + (bytes<<1) - (bytes<<8) + bytes)') == \
             '<Expr>(<BinOp><BinOp><BinOp>(<BinOp><Subscript ctx="Load"><value><Name ctx="Load" name="bytes">bytes</Name></value><slice>[<Index><Num>0</Num></Index>]</slice></Subscript><LShift>&lt;&lt;</LShift><Num>4</Num></BinOp>)<Add> + </Add>(<BinOp><Name ctx="Load" name="bytes">bytes</Name><LShift>&lt;&lt;</LShift><Num>1</Num></BinOp>)</BinOp><Sub> - </Sub>(<BinOp><Name ctx="Load" name="bytes">bytes</Name><LShift>&lt;&lt;</LShift><Num>8</Num></BinOp>)</BinOp><Add> + </Add><Name ctx="Load" name="bytes">bytes</Name></BinOp>)</Expr>'
 
+    def test_elif_prev_space(self, s2xml):
+        assert s2xml('if 0:\n    if 1: 2\n    elif 3: 4') == \
+            '<If>if <test><Num>0</Num></test>:<body>\n'\
+            '    <If>if <test><Num>1</Num></test>:<body> '\
+            '<Expr><Num>2</Num></Expr></body>'\
+            '\n<orelse>    <If>elif <test><Num>3</Num></test>:'\
+            '<body> <Expr><Num>4</Num></Expr></body></If></orelse>'\
+            '</If></body></If>'
 
