@@ -99,6 +99,9 @@ class TestTuple:
     def test_empty(self, s2xml):
         assert s2xml('()') == '<Expr><Tuple ctx="Load">()</Tuple></Expr>'
 
+    def test_empty_comment(self, s2xml):
+        assert s2xml('() #') == '<Expr><Tuple ctx="Load">()</Tuple></Expr> #'
+
     def test_tuple_space(self, s2xml):
         assert s2xml('1, 2 ,  3') == '<Expr><Tuple ctx="Load">'\
             '<Num>1</Num>, <Num>2</Num> ,  <Num>3</Num></Tuple></Expr>'
@@ -675,9 +678,9 @@ class TestSetComp:
 
 class TestDictComp:
     def test_setcomp(self, s2xml):
-        assert s2xml('{a : 0 for a in b}') == \
+        assert s2xml('{a :\n 0 for a in b}') == \
             '<Expr><DictComp>{<key><Name ctx="Load" name="a">a</Name></key>'\
-            ' : <value><Num>0</Num></value>'\
+            ' :\n <value><Num>0</Num></value>'\
             '<generators><comprehension> for '\
             '<target><Name ctx="Store" name="a">a</Name></target>'\
             ' in <iter><Name ctx="Load" name="b">b</Name></iter>'\
@@ -711,6 +714,11 @@ class TestLambda:
             '<arg name="b">b<default>=<Num>2</Num></default></arg> '\
             '</arguments>: '\
             '<body><Num>4</Num></body></Lambda></Expr>'
+
+    def test_lambda_multiline(self, s2xml):
+        assert s2xml('(lambda :\n 4)') == \
+            '<Expr>(<Lambda>lambda <arguments/>:\n '\
+            '<body><Num>4</Num></body></Lambda>)</Expr>'
 
 
 ####################### stmt
@@ -1186,14 +1194,14 @@ class TestTry:
 
 class TestWith:
     def test_with(self, s2xml):
-        assert s2xml('with 5:\n    pass') == \
-            '<With>with <items><withitem><Num>5</Num></withitem></items>:'\
+        assert s2xml('with 5 :\n    pass') == \
+            '<With>with <items><withitem><Num>5</Num></withitem> </items>:'\
             '<body>\n    <Pass>pass</Pass></body></With>'
 
     def test_with_var(self, s2xml):
-        assert s2xml('with 5 as foo:\n    pass') == \
+        assert s2xml('with 5 as foo :\n    pass') == \
             '<With>with <items><withitem><Num>5</Num> as '\
-            '<Name ctx="Store" name="foo">foo</Name></withitem></items>:'\
+            '<Name ctx="Store" name="foo">foo</Name></withitem> </items>:'\
             '<body>\n    <Pass>pass</Pass></body></With>'
 
     def test_with_multi(self, s2xml):
@@ -1303,3 +1311,16 @@ class TestBugs:
             '(<args><Name ctx="Load" name="i">i</Name></args>)</Call>'\
             '<Add> + </Add><Str><s>"A"</s></Str></BinOp>)</value>.<attr>'\
             'splitlines</attr></Attribute></Expr>'
+
+    def test_triple_par(self, s2xml):
+        assert s2xml('a(((("a" * i) + "-") * i)[:-1], "-")') == \
+            '<Expr><Call><func><Name ctx="Load" name="a">a</Name></func>'\
+            '(<args><Subscript ctx="Load"><value>(<BinOp>(<BinOp>(<BinOp>'\
+            '<Str><s>"a"</s></Str><Mult> * </Mult><Name ctx="Load" name="i">'\
+            'i</Name></BinOp>)<Add> + </Add><Str><s>"-"</s></Str></BinOp>)'\
+            '<Mult> * </Mult><Name ctx="Load" name="i">i</Name></BinOp>)'\
+            '</value><slice>[<Slice>:<upper><UnaryOp op="USub">-<Num>1</Num>'\
+            '</UnaryOp></upper></Slice>]</slice></Subscript>, '\
+            '<Str><s>"-"</s></Str></args>)</Call></Expr>'
+
+

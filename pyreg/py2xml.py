@@ -63,13 +63,19 @@ class AstNodeX(AstNode):
 
 
     def real_start(self):
-        """Because of http://bugs.python.org/issue18374"""
+        """Because of http://bugs.python.org/issue18374
+
+        Getting the first element is not correct for deeply nested
+        parens but good enough most of the time...
+        If column number provided is correct, it is more reliable,
+        os use min() to get the "better" one.
+        """
         if self.class_ in ('Attribute', 'Subscript'):
             first = self.fields['value'].value
             return first.real_start()
         if self.class_ == 'BinOp':
             first = self.fields['left'].value
-            return first.real_start()
+            return min((self.line, self.column), first.real_start())
         if self.class_ == 'Call':
             first = self.fields['func'].value
             return first.real_start()
@@ -102,11 +108,13 @@ class AstNodeX(AstNode):
         the whole expression or just the first element.
         """
         def _build_expr(self, parent):
+            #print('>>>>', self.class_, self.real_start())
             next_token = self.tokens.next()
             if next_token.exact_type == Token.LPAR:
                 if next_token.start < (self.line, self.column):
                     lpar_str = self.pop_merge_NL()
                     element1_start = self.tokens.next().start
+                    #print('****', element1_start)
                     self.tokens.lpar.append([lpar_str, element1_start, self])
             fragment = Element('frag')
             func(self, fragment)
@@ -128,7 +136,7 @@ class AstNodeX(AstNode):
             # check if the paren is closing this node
             if has_rparen and self.tokens.lpar:
                 lpar_text, start, node = self.tokens.lpar[-1]
-                #print(self.class_, start, self.real_start())
+                #print(self.class_, start, self.real_start(), node is self)
                 if start == self.real_start() or node is self:
                     close_paren = True
                 else:
@@ -147,6 +155,7 @@ class AstNodeX(AstNode):
             else:
                 for child in fragment.childNodes:
                     parent.appendChild(child)
+            # print('<<<', self.class_)
 
         return _build_expr
 
@@ -257,7 +266,8 @@ class AstNodeX(AstNode):
             # special case, empty tuple is represented by an empty `()`
             assert self.tokens.pop().exact_type == Token.LPAR
             assert self.tokens.pop().exact_type == Token.RPAR
-            ele.appendChild(DOM.Text('(' + self.tokens.text_prev2next()))
+            text = '(' + self.tokens.prev_space() + ')'
+            ele.appendChild(DOM.Text(text))
         parent.appendChild(ele)
 
 
@@ -638,8 +648,7 @@ class AstNodeX(AstNode):
             ele_key = Element('key')
             ele.appendChild(ele_key)
             self.fields['key'].value.to_xml(ele_key)
-            assert self.tokens.pop().exact_type == Token.COLON
-            ele.appendChild(DOM.Text(self.tokens.text_prev2next()))
+            ele.appendChild(DOM.Text(self.pop_merge_NL(lspace=True))) # COLON
             ele_value = Element('value')
             ele.appendChild(ele_value)
             self.fields['value'].value.to_xml(ele_value)
@@ -700,8 +709,7 @@ class AstNodeX(AstNode):
         ele.appendChild(ele_arguments)
 
         # COLON :
-        assert self.tokens.pop().exact_type == Token.COLON
-        ele.appendChild(DOM.Text(':' + self.tokens.space_right()))
+        ele.appendChild(DOM.Text(self.pop_merge_NL()))
 
         # body
         ele_body = Element('body')
@@ -1161,7 +1169,7 @@ class AstNodeX(AstNode):
         # else
         orelse = self.fields['orelse'].value
         if orelse:
-            self.tokens.write_non_ast_tokens(ele)
+            self.tokens.write_non_ast_tokens(ele, rspace=False)
             assert self.tokens.pop().string == 'else', self.tokens.current
             else_text = self.tokens.text_prev2next() + ':'
             assert self.tokens.pop().exact_type == Token.COLON
@@ -1278,7 +1286,7 @@ class AstNodeX(AstNode):
 
         # colon
         assert self.tokens.pop().exact_type == Token.COLON
-        ele.appendChild(DOM.Text(self.tokens.prev_space() + ':'))
+        ele.appendChild(DOM.Text(':'))
         # body
         self._c_field_list(ele, 'body')
         parent.appendChild(ele)
