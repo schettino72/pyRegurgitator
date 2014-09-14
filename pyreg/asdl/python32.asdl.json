@@ -1,1232 +1,1232 @@
 {
     "Add": {
-        "category": "operator", 
-        "fields": {}, 
+        "category": "operator",
+        "fields": {},
         "order": []
-    }, 
+    },
     "And": {
-        "category": "boolop", 
-        "fields": {}, 
+        "category": "boolop",
+        "fields": {},
         "order": []
-    }, 
+    },
     "Assert": {
-        "category": "stmt", 
+        "category": "stmt",
         "fields": {
             "msg": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "?"
-            }, 
+            },
             "test": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
             }
-        }, 
+        },
         "order": [
-            "test", 
+            "test",
             "msg"
         ]
-    }, 
+    },
     "Assign": {
-        "category": "stmt", 
+        "category": "stmt",
         "fields": {
             "targets": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "*"
-            }, 
+            },
             "value": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
             }
-        }, 
+        },
         "order": [
-            "targets", 
+            "targets",
             "value"
         ]
-    }, 
+    },
     "Attribute": {
-        "category": "expr", 
+        "category": "expr",
         "fields": {
             "attr": {
-                "cat": "identifier", 
+                "cat": "identifier",
                 "q": ""
-            }, 
+            },
             "ctx": {
-                "cat": "expr_context", 
+                "cat": "expr_context",
                 "q": ""
-            }, 
+            },
             "value": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
             }
-        }, 
+        },
         "order": [
-            "value", 
-            "attr", 
+            "value",
+            "attr",
             "ctx"
         ]
-    }, 
+    },
     "AugAssign": {
-        "category": "stmt", 
+        "category": "stmt",
         "fields": {
             "op": {
-                "cat": "operator", 
+                "cat": "operator",
                 "q": ""
-            }, 
+            },
             "target": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
-            }, 
+            },
             "value": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
             }
-        }, 
+        },
         "order": [
-            "target", 
-            "op", 
+            "target",
+            "op",
             "value"
         ]
-    }, 
+    },
     "AugLoad": {
-        "category": "expr_context", 
-        "fields": {}, 
+        "category": "expr_context",
+        "fields": {},
         "order": []
-    }, 
+    },
     "AugStore": {
-        "category": "expr_context", 
-        "fields": {}, 
+        "category": "expr_context",
+        "fields": {},
         "order": []
-    }, 
+    },
     "BinOp": {
-        "category": "expr", 
+        "category": "expr",
         "fields": {
             "left": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
-            }, 
+            },
             "op": {
-                "cat": "operator", 
+                "cat": "operator",
                 "q": ""
-            }, 
+            },
             "right": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
             }
-        }, 
+        },
         "order": [
-            "left", 
-            "op", 
+            "left",
+            "op",
             "right"
         ]
-    }, 
+    },
     "BitAnd": {
-        "category": "operator", 
-        "fields": {}, 
+        "category": "operator",
+        "fields": {},
         "order": []
-    }, 
+    },
     "BitOr": {
-        "category": "operator", 
-        "fields": {}, 
+        "category": "operator",
+        "fields": {},
         "order": []
-    }, 
+    },
     "BitXor": {
-        "category": "operator", 
-        "fields": {}, 
+        "category": "operator",
+        "fields": {},
         "order": []
-    }, 
+    },
     "BoolOp": {
-        "category": "expr", 
+        "category": "expr",
         "fields": {
             "op": {
-                "cat": "boolop", 
+                "cat": "boolop",
                 "q": ""
-            }, 
+            },
             "values": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "*"
             }
-        }, 
+        },
         "order": [
-            "op", 
+            "op",
             "values"
         ]
-    }, 
+    },
     "Break": {
-        "category": "stmt", 
-        "fields": {}, 
+        "category": "stmt",
+        "fields": {},
         "order": []
-    }, 
+    },
     "Bytes": {
-        "category": "expr", 
+        "category": "expr",
         "fields": {
             "s": {
-                "cat": "string", 
+                "cat": "string",
                 "q": ""
             }
-        }, 
+        },
         "order": [
             "s"
         ]
-    }, 
+    },
     "Call": {
-        "category": "expr", 
+        "category": "expr",
         "fields": {
             "args": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "*"
-            }, 
+            },
             "func": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
-            }, 
+            },
             "keywords": {
-                "cat": "keyword", 
+                "cat": "keyword",
                 "q": "*"
-            }, 
+            },
             "kwargs": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "?"
-            }, 
+            },
             "starargs": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "?"
             }
-        }, 
+        },
         "order": [
-            "func", 
-            "args", 
-            "keywords", 
-            "starargs", 
+            "func",
+            "args",
+            "keywords",
+            "starargs",
             "kwargs"
         ]
-    }, 
+    },
     "ClassDef": {
-        "category": "stmt", 
+        "category": "stmt",
         "fields": {
             "bases": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "*"
-            }, 
+            },
             "body": {
-                "cat": "stmt", 
+                "cat": "stmt",
                 "q": "*"
-            }, 
+            },
             "decorator_list": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "*"
-            }, 
+            },
             "keywords": {
-                "cat": "keyword", 
+                "cat": "keyword",
                 "q": "*"
-            }, 
+            },
             "kwargs": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "?"
-            }, 
+            },
             "name": {
-                "cat": "identifier", 
+                "cat": "identifier",
                 "q": ""
-            }, 
+            },
             "starargs": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "?"
             }
-        }, 
+        },
         "order": [
-            "name", 
-            "bases", 
-            "keywords", 
-            "starargs", 
-            "kwargs", 
-            "body", 
+            "name",
+            "bases",
+            "keywords",
+            "starargs",
+            "kwargs",
+            "body",
             "decorator_list"
         ]
-    }, 
+    },
     "Compare": {
-        "category": "expr", 
+        "category": "expr",
         "fields": {
             "comparators": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "*"
-            }, 
+            },
             "left": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
-            }, 
+            },
             "ops": {
-                "cat": "cmpop", 
+                "cat": "cmpop",
                 "q": "*"
             }
-        }, 
+        },
         "order": [
-            "left", 
-            "ops", 
+            "left",
+            "ops",
             "comparators"
         ]
-    }, 
+    },
     "Continue": {
-        "category": "stmt", 
-        "fields": {}, 
+        "category": "stmt",
+        "fields": {},
         "order": []
-    }, 
+    },
     "Del": {
-        "category": "expr_context", 
-        "fields": {}, 
+        "category": "expr_context",
+        "fields": {},
         "order": []
-    }, 
+    },
     "Delete": {
-        "category": "stmt", 
+        "category": "stmt",
         "fields": {
             "targets": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "*"
             }
-        }, 
+        },
         "order": [
             "targets"
         ]
-    }, 
+    },
     "Dict": {
-        "category": "expr", 
+        "category": "expr",
         "fields": {
             "keys": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "*"
-            }, 
+            },
             "values": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "*"
             }
-        }, 
+        },
         "order": [
-            "keys", 
+            "keys",
             "values"
         ]
-    }, 
+    },
     "DictComp": {
-        "category": "expr", 
+        "category": "expr",
         "fields": {
             "generators": {
-                "cat": "comprehension", 
+                "cat": "comprehension",
                 "q": "*"
-            }, 
+            },
             "key": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
-            }, 
+            },
             "value": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
             }
-        }, 
+        },
         "order": [
-            "key", 
-            "value", 
+            "key",
+            "value",
             "generators"
         ]
-    }, 
+    },
     "Div": {
-        "category": "operator", 
-        "fields": {}, 
+        "category": "operator",
+        "fields": {},
         "order": []
-    }, 
+    },
     "Ellipsis": {
-        "category": "expr", 
-        "fields": {}, 
+        "category": "expr",
+        "fields": {},
         "order": []
-    }, 
+    },
     "Eq": {
-        "category": "cmpop", 
-        "fields": {}, 
+        "category": "cmpop",
+        "fields": {},
         "order": []
-    }, 
+    },
     "ExceptHandler": {
-        "category": "excepthandler", 
+        "category": "excepthandler",
         "fields": {
             "body": {
-                "cat": "stmt", 
+                "cat": "stmt",
                 "q": "*"
-            }, 
+            },
             "name": {
-                "cat": "identifier", 
+                "cat": "identifier",
                 "q": "?"
-            }, 
+            },
             "type": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "?"
             }
-        }, 
+        },
         "order": [
-            "type", 
-            "name", 
+            "type",
+            "name",
             "body"
         ]
-    }, 
+    },
     "Expr": {
-        "category": "stmt", 
+        "category": "stmt",
         "fields": {
             "value": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
             }
-        }, 
+        },
         "order": [
             "value"
         ]
-    }, 
+    },
     "Expression": {
-        "category": "mod", 
+        "category": "mod",
         "fields": {
             "body": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
             }
-        }, 
+        },
         "order": [
             "body"
         ]
-    }, 
+    },
     "ExtSlice": {
-        "category": "slice", 
+        "category": "slice",
         "fields": {
             "dims": {
-                "cat": "slice", 
+                "cat": "slice",
                 "q": "*"
             }
-        }, 
+        },
         "order": [
             "dims"
         ]
-    }, 
+    },
     "FloorDiv": {
-        "category": "operator", 
-        "fields": {}, 
+        "category": "operator",
+        "fields": {},
         "order": []
-    }, 
+    },
     "For": {
-        "category": "stmt", 
+        "category": "stmt",
         "fields": {
             "body": {
-                "cat": "stmt", 
+                "cat": "stmt",
                 "q": "*"
-            }, 
+            },
             "iter": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
-            }, 
+            },
             "orelse": {
-                "cat": "stmt", 
+                "cat": "stmt",
                 "q": "*"
-            }, 
+            },
             "target": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
             }
-        }, 
+        },
         "order": [
-            "target", 
-            "iter", 
-            "body", 
+            "target",
+            "iter",
+            "body",
             "orelse"
         ]
-    }, 
+    },
     "FunctionDef": {
-        "category": "stmt", 
+        "category": "stmt",
         "fields": {
             "args": {
-                "cat": "arguments", 
+                "cat": "arguments",
                 "q": ""
-            }, 
+            },
             "body": {
-                "cat": "stmt", 
+                "cat": "stmt",
                 "q": "*"
-            }, 
+            },
             "decorator_list": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "*"
-            }, 
+            },
             "name": {
-                "cat": "identifier", 
+                "cat": "identifier",
                 "q": ""
-            }, 
+            },
             "returns": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "?"
             }
-        }, 
+        },
         "order": [
-            "name", 
-            "args", 
-            "body", 
-            "decorator_list", 
+            "name",
+            "args",
+            "body",
+            "decorator_list",
             "returns"
         ]
-    }, 
+    },
     "GeneratorExp": {
-        "category": "expr", 
+        "category": "expr",
         "fields": {
             "elt": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
-            }, 
+            },
             "generators": {
-                "cat": "comprehension", 
+                "cat": "comprehension",
                 "q": "*"
             }
-        }, 
+        },
         "order": [
-            "elt", 
+            "elt",
             "generators"
         ]
-    }, 
+    },
     "Global": {
-        "category": "stmt", 
+        "category": "stmt",
         "fields": {
             "names": {
-                "cat": "identifier", 
+                "cat": "identifier",
                 "q": "*"
             }
-        }, 
+        },
         "order": [
             "names"
         ]
-    }, 
+    },
     "Gt": {
-        "category": "cmpop", 
-        "fields": {}, 
+        "category": "cmpop",
+        "fields": {},
         "order": []
-    }, 
+    },
     "GtE": {
-        "category": "cmpop", 
-        "fields": {}, 
+        "category": "cmpop",
+        "fields": {},
         "order": []
-    }, 
+    },
     "If": {
-        "category": "stmt", 
+        "category": "stmt",
         "fields": {
             "body": {
-                "cat": "stmt", 
+                "cat": "stmt",
                 "q": "*"
-            }, 
+            },
             "orelse": {
-                "cat": "stmt", 
+                "cat": "stmt",
                 "q": "*"
-            }, 
+            },
             "test": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
             }
-        }, 
+        },
         "order": [
-            "test", 
-            "body", 
+            "test",
+            "body",
             "orelse"
         ]
-    }, 
+    },
     "IfExp": {
-        "category": "expr", 
+        "category": "expr",
         "fields": {
             "body": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
-            }, 
+            },
             "orelse": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
-            }, 
+            },
             "test": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
             }
-        }, 
+        },
         "order": [
-            "test", 
-            "body", 
+            "test",
+            "body",
             "orelse"
         ]
-    }, 
+    },
     "Import": {
-        "category": "stmt", 
+        "category": "stmt",
         "fields": {
             "names": {
-                "cat": "alias", 
+                "cat": "alias",
                 "q": "*"
             }
-        }, 
+        },
         "order": [
             "names"
         ]
-    }, 
+    },
     "ImportFrom": {
-        "category": "stmt", 
+        "category": "stmt",
         "fields": {
             "level": {
-                "cat": "int", 
+                "cat": "int",
                 "q": "?"
-            }, 
+            },
             "module": {
-                "cat": "identifier", 
+                "cat": "identifier",
                 "q": "?"
-            }, 
+            },
             "names": {
-                "cat": "alias", 
+                "cat": "alias",
                 "q": "*"
             }
-        }, 
+        },
         "order": [
-            "module", 
-            "names", 
+            "module",
+            "names",
             "level"
         ]
-    }, 
+    },
     "In": {
-        "category": "cmpop", 
-        "fields": {}, 
+        "category": "cmpop",
+        "fields": {},
         "order": []
-    }, 
+    },
     "Index": {
-        "category": "slice", 
+        "category": "slice",
         "fields": {
             "value": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
             }
-        }, 
+        },
         "order": [
             "value"
         ]
-    }, 
+    },
     "Interactive": {
-        "category": "mod", 
+        "category": "mod",
         "fields": {
             "body": {
-                "cat": "stmt", 
+                "cat": "stmt",
                 "q": "*"
             }
-        }, 
+        },
         "order": [
             "body"
         ]
-    }, 
+    },
     "Invert": {
-        "category": "unaryop", 
-        "fields": {}, 
+        "category": "unaryop",
+        "fields": {},
         "order": []
-    }, 
+    },
     "Is": {
-        "category": "cmpop", 
-        "fields": {}, 
+        "category": "cmpop",
+        "fields": {},
         "order": []
-    }, 
+    },
     "IsNot": {
-        "category": "cmpop", 
-        "fields": {}, 
+        "category": "cmpop",
+        "fields": {},
         "order": []
-    }, 
+    },
     "LShift": {
-        "category": "operator", 
-        "fields": {}, 
+        "category": "operator",
+        "fields": {},
         "order": []
-    }, 
+    },
     "Lambda": {
-        "category": "expr", 
+        "category": "expr",
         "fields": {
             "args": {
-                "cat": "arguments", 
+                "cat": "arguments",
                 "q": ""
-            }, 
+            },
             "body": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
             }
-        }, 
+        },
         "order": [
-            "args", 
+            "args",
             "body"
         ]
-    }, 
+    },
     "List": {
-        "category": "expr", 
+        "category": "expr",
         "fields": {
             "ctx": {
-                "cat": "expr_context", 
+                "cat": "expr_context",
                 "q": ""
-            }, 
+            },
             "elts": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "*"
             }
-        }, 
+        },
         "order": [
-            "elts", 
+            "elts",
             "ctx"
         ]
-    }, 
+    },
     "ListComp": {
-        "category": "expr", 
+        "category": "expr",
         "fields": {
             "elt": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
-            }, 
+            },
             "generators": {
-                "cat": "comprehension", 
+                "cat": "comprehension",
                 "q": "*"
             }
-        }, 
+        },
         "order": [
-            "elt", 
+            "elt",
             "generators"
         ]
-    }, 
+    },
     "Load": {
-        "category": "expr_context", 
-        "fields": {}, 
+        "category": "expr_context",
+        "fields": {},
         "order": []
-    }, 
+    },
     "Lt": {
-        "category": "cmpop", 
-        "fields": {}, 
+        "category": "cmpop",
+        "fields": {},
         "order": []
-    }, 
+    },
     "LtE": {
-        "category": "cmpop", 
-        "fields": {}, 
+        "category": "cmpop",
+        "fields": {},
         "order": []
-    }, 
+    },
     "Mod": {
-        "category": "operator", 
-        "fields": {}, 
+        "category": "operator",
+        "fields": {},
         "order": []
-    }, 
+    },
     "Module": {
-        "category": "mod", 
+        "category": "mod",
         "fields": {
             "body": {
-                "cat": "stmt", 
+                "cat": "stmt",
                 "q": "*"
             }
-        }, 
+        },
         "order": [
             "body"
         ]
-    }, 
+    },
     "Mult": {
-        "category": "operator", 
-        "fields": {}, 
+        "category": "operator",
+        "fields": {},
         "order": []
-    }, 
+    },
     "Name": {
-        "category": "expr", 
+        "category": "expr",
         "fields": {
             "ctx": {
-                "cat": "expr_context", 
+                "cat": "expr_context",
                 "q": ""
-            }, 
+            },
             "id": {
-                "cat": "identifier", 
+                "cat": "identifier",
                 "q": ""
             }
-        }, 
+        },
         "order": [
-            "id", 
+            "id",
             "ctx"
         ]
-    }, 
+    },
     "Nonlocal": {
-        "category": "stmt", 
+        "category": "stmt",
         "fields": {
             "names": {
-                "cat": "identifier", 
+                "cat": "identifier",
                 "q": "*"
             }
-        }, 
+        },
         "order": [
             "names"
         ]
-    }, 
+    },
     "Not": {
-        "category": "unaryop", 
-        "fields": {}, 
+        "category": "unaryop",
+        "fields": {},
         "order": []
-    }, 
+    },
     "NotEq": {
-        "category": "cmpop", 
-        "fields": {}, 
+        "category": "cmpop",
+        "fields": {},
         "order": []
-    }, 
+    },
     "NotIn": {
-        "category": "cmpop", 
-        "fields": {}, 
+        "category": "cmpop",
+        "fields": {},
         "order": []
-    }, 
+    },
     "Num": {
-        "category": "expr", 
+        "category": "expr",
         "fields": {
             "n": {
-                "cat": "object", 
+                "cat": "object",
                 "q": ""
             }
-        }, 
+        },
         "order": [
             "n"
         ]
-    }, 
+    },
     "Or": {
-        "category": "boolop", 
-        "fields": {}, 
+        "category": "boolop",
+        "fields": {},
         "order": []
-    }, 
+    },
     "Param": {
-        "category": "expr_context", 
-        "fields": {}, 
+        "category": "expr_context",
+        "fields": {},
         "order": []
-    }, 
+    },
     "Pass": {
-        "category": "stmt", 
-        "fields": {}, 
+        "category": "stmt",
+        "fields": {},
         "order": []
-    }, 
+    },
     "Pow": {
-        "category": "operator", 
-        "fields": {}, 
+        "category": "operator",
+        "fields": {},
         "order": []
-    }, 
+    },
     "RShift": {
-        "category": "operator", 
-        "fields": {}, 
+        "category": "operator",
+        "fields": {},
         "order": []
-    }, 
+    },
     "Raise": {
-        "category": "stmt", 
+        "category": "stmt",
         "fields": {
             "cause": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "?"
-            }, 
+            },
             "exc": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "?"
             }
-        }, 
+        },
         "order": [
-            "exc", 
+            "exc",
             "cause"
         ]
-    }, 
+    },
     "Return": {
-        "category": "stmt", 
+        "category": "stmt",
         "fields": {
             "value": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "?"
             }
-        }, 
+        },
         "order": [
             "value"
         ]
-    }, 
+    },
     "Set": {
-        "category": "expr", 
+        "category": "expr",
         "fields": {
             "elts": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "*"
             }
-        }, 
+        },
         "order": [
             "elts"
         ]
-    }, 
+    },
     "SetComp": {
-        "category": "expr", 
+        "category": "expr",
         "fields": {
             "elt": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
-            }, 
+            },
             "generators": {
-                "cat": "comprehension", 
+                "cat": "comprehension",
                 "q": "*"
             }
-        }, 
+        },
         "order": [
-            "elt", 
+            "elt",
             "generators"
         ]
-    }, 
+    },
     "Slice": {
-        "category": "slice", 
+        "category": "slice",
         "fields": {
             "lower": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "?"
-            }, 
+            },
             "step": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "?"
-            }, 
+            },
             "upper": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "?"
             }
-        }, 
+        },
         "order": [
-            "lower", 
-            "upper", 
+            "lower",
+            "upper",
             "step"
         ]
-    }, 
+    },
     "Starred": {
-        "category": "expr", 
+        "category": "expr",
         "fields": {
             "ctx": {
-                "cat": "expr_context", 
+                "cat": "expr_context",
                 "q": ""
-            }, 
+            },
             "value": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
             }
-        }, 
+        },
         "order": [
-            "value", 
+            "value",
             "ctx"
         ]
-    }, 
+    },
     "Store": {
-        "category": "expr_context", 
-        "fields": {}, 
+        "category": "expr_context",
+        "fields": {},
         "order": []
-    }, 
+    },
     "Str": {
-        "category": "expr", 
+        "category": "expr",
         "fields": {
             "s": {
-                "cat": "string", 
+                "cat": "string",
                 "q": ""
             }
-        }, 
+        },
         "order": [
             "s"
         ]
-    }, 
+    },
     "Sub": {
-        "category": "operator", 
-        "fields": {}, 
+        "category": "operator",
+        "fields": {},
         "order": []
-    }, 
+    },
     "Subscript": {
-        "category": "expr", 
+        "category": "expr",
         "fields": {
             "ctx": {
-                "cat": "expr_context", 
+                "cat": "expr_context",
                 "q": ""
-            }, 
+            },
             "slice": {
-                "cat": "slice", 
+                "cat": "slice",
                 "q": ""
-            }, 
+            },
             "value": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
             }
-        }, 
+        },
         "order": [
-            "value", 
-            "slice", 
+            "value",
+            "slice",
             "ctx"
         ]
-    }, 
+    },
     "Suite": {
-        "category": "mod", 
+        "category": "mod",
         "fields": {
             "body": {
-                "cat": "stmt", 
+                "cat": "stmt",
                 "q": "*"
             }
-        }, 
+        },
         "order": [
             "body"
         ]
-    }, 
+    },
     "TryExcept": {
-        "category": "stmt", 
+        "category": "stmt",
         "fields": {
             "body": {
-                "cat": "stmt", 
+                "cat": "stmt",
                 "q": "*"
-            }, 
+            },
             "handlers": {
-                "cat": "excepthandler", 
+                "cat": "excepthandler",
                 "q": "*"
-            }, 
+            },
             "orelse": {
-                "cat": "stmt", 
+                "cat": "stmt",
                 "q": "*"
             }
-        }, 
+        },
         "order": [
-            "body", 
-            "handlers", 
+            "body",
+            "handlers",
             "orelse"
         ]
-    }, 
+    },
     "TryFinally": {
-        "category": "stmt", 
+        "category": "stmt",
         "fields": {
             "body": {
-                "cat": "stmt", 
+                "cat": "stmt",
                 "q": "*"
-            }, 
+            },
             "finalbody": {
-                "cat": "stmt", 
+                "cat": "stmt",
                 "q": "*"
             }
-        }, 
+        },
         "order": [
-            "body", 
+            "body",
             "finalbody"
         ]
-    }, 
+    },
     "Tuple": {
-        "category": "expr", 
+        "category": "expr",
         "fields": {
             "ctx": {
-                "cat": "expr_context", 
+                "cat": "expr_context",
                 "q": ""
-            }, 
+            },
             "elts": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "*"
             }
-        }, 
+        },
         "order": [
-            "elts", 
+            "elts",
             "ctx"
         ]
-    }, 
+    },
     "UAdd": {
-        "category": "unaryop", 
-        "fields": {}, 
+        "category": "unaryop",
+        "fields": {},
         "order": []
-    }, 
+    },
     "USub": {
-        "category": "unaryop", 
-        "fields": {}, 
+        "category": "unaryop",
+        "fields": {},
         "order": []
-    }, 
+    },
     "UnaryOp": {
-        "category": "expr", 
+        "category": "expr",
         "fields": {
             "op": {
-                "cat": "unaryop", 
+                "cat": "unaryop",
                 "q": ""
-            }, 
+            },
             "operand": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
             }
-        }, 
+        },
         "order": [
-            "op", 
+            "op",
             "operand"
         ]
-    }, 
+    },
     "While": {
-        "category": "stmt", 
+        "category": "stmt",
         "fields": {
             "body": {
-                "cat": "stmt", 
+                "cat": "stmt",
                 "q": "*"
-            }, 
+            },
             "orelse": {
-                "cat": "stmt", 
+                "cat": "stmt",
                 "q": "*"
-            }, 
+            },
             "test": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
             }
-        }, 
+        },
         "order": [
-            "test", 
-            "body", 
+            "test",
+            "body",
             "orelse"
         ]
-    }, 
+    },
     "With": {
-        "category": "stmt", 
+        "category": "stmt",
         "fields": {
             "body": {
-                "cat": "stmt", 
+                "cat": "stmt",
                 "q": "*"
-            }, 
+            },
             "context_expr": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
-            }, 
+            },
             "optional_vars": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "?"
             }
-        }, 
+        },
         "order": [
-            "context_expr", 
-            "optional_vars", 
+            "context_expr",
+            "optional_vars",
             "body"
         ]
-    }, 
+    },
     "Yield": {
-        "category": "expr", 
+        "category": "expr",
         "fields": {
             "value": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "?"
             }
-        }, 
+        },
         "order": [
             "value"
         ]
-    }, 
+    },
     "alias": {
-        "category": "alias", 
+        "category": "alias",
         "fields": {
             "asname": {
-                "cat": "identifier", 
+                "cat": "identifier",
                 "q": "?"
-            }, 
+            },
             "name": {
-                "cat": "identifier", 
+                "cat": "identifier",
                 "q": ""
             }
-        }, 
+        },
         "order": [
-            "name", 
+            "name",
             "asname"
         ]
-    }, 
+    },
     "arg": {
-        "category": "arg", 
+        "category": "arg",
         "fields": {
             "annotation": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "?"
-            }, 
+            },
             "arg": {
-                "cat": "identifier", 
+                "cat": "identifier",
                 "q": ""
             }
-        }, 
+        },
         "order": [
-            "arg", 
+            "arg",
             "annotation"
         ]
-    }, 
+    },
     "arguments": {
-        "category": "arguments", 
+        "category": "arguments",
         "fields": {
             "args": {
-                "cat": "arg", 
+                "cat": "arg",
                 "q": "*"
-            }, 
+            },
             "defaults": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "*"
-            }, 
+            },
             "kw_defaults": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "*"
-            }, 
+            },
             "kwarg": {
-                "cat": "identifier", 
+                "cat": "identifier",
                 "q": "?"
-            }, 
+            },
             "kwargannotation": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "?"
-            }, 
+            },
             "kwonlyargs": {
-                "cat": "arg", 
+                "cat": "arg",
                 "q": "*"
-            }, 
+            },
             "vararg": {
-                "cat": "identifier", 
+                "cat": "identifier",
                 "q": "?"
-            }, 
+            },
             "varargannotation": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "?"
             }
-        }, 
+        },
         "order": [
-            "args", 
-            "vararg", 
-            "varargannotation", 
-            "kwonlyargs", 
-            "kwarg", 
-            "kwargannotation", 
-            "defaults", 
+            "args",
+            "vararg",
+            "varargannotation",
+            "kwonlyargs",
+            "kwarg",
+            "kwargannotation",
+            "defaults",
             "kw_defaults"
         ]
-    }, 
+    },
     "comprehension": {
-        "category": "comprehension", 
+        "category": "comprehension",
         "fields": {
             "ifs": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": "*"
-            }, 
+            },
             "iter": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
-            }, 
+            },
             "target": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
             }
-        }, 
+        },
         "order": [
-            "target", 
-            "iter", 
+            "target",
+            "iter",
             "ifs"
         ]
-    }, 
+    },
     "identifier": {
-        "category": "-- ASDL's four builtin types are identifier", 
-        "fields": {}, 
+        "category": "-- ASDL's four builtin types are identifier",
+        "fields": {},
         "order": []
-    }, 
+    },
     "int": {
-        "category": " int", 
-        "fields": {}, 
+        "category": " int",
+        "fields": {},
         "order": []
-    }, 
+    },
     "keyword": {
-        "category": "keyword", 
+        "category": "keyword",
         "fields": {
             "arg": {
-                "cat": "identifier", 
+                "cat": "identifier",
                 "q": ""
-            }, 
+            },
             "value": {
-                "cat": "expr", 
+                "cat": "expr",
                 "q": ""
             }
-        }, 
+        },
         "order": [
-            "arg", 
+            "arg",
             "value"
         ]
-    }, 
+    },
     "object\n": {
-        "category": " object\n", 
-        "fields": {}, 
+        "category": " object\n",
+        "fields": {},
         "order": []
-    }, 
+    },
     "string": {
-        "category": " string", 
-        "fields": {}, 
+        "category": " string",
+        "fields": {},
         "order": []
     }
 }

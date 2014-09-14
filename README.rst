@@ -6,6 +6,10 @@ Tools for analysing python code.
 
 http://bitbucket.org/schettino72/pyregurgitator/
 
+ASDL links
+
+ftp://ftp.cs.princeton.edu/techreports/1997/554.pdf
+https://github.com/python/cpython/blob/master/Parser/Python.asdl
 
 Features (done)
 ================

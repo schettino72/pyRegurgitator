@@ -205,15 +205,15 @@ class AstNode(object):
         @returns string
         """
         attrs = ["%s=%s" % (k, v) for k,v in self.attrs]
-        fields = ["%s=%s" % (k, v.to_text()) for k,v in self.fields.items()]
+        fields = ["%s=%s" % (k, v.to_text()) for k,v in
+                  sorted(self.fields.items())]
         return "%s(%s)" % (self.class_, ", ".join(attrs + fields))
 
     def to_map(self):
         items = []
-        for f in self.fields.values():
-            items.extend(f.to_map())
+        for name, value in sorted(self.fields.items()):
+            items.extend(value.to_map())
         return items
-
 
 
 def ast2html(filename, tree):
@@ -265,7 +265,11 @@ Super pretty-printer for python modules's AST(abstract syntax tree)."""
 
     if args.format == 'html':
         html = ast2html(filename, tree)
-        sys.stdout.buffer.write(html.encode('utf8'))
+        if sys.stdout.encoding == 'UTF-8' or sys.stdout.encoding is None:
+            sys.stdout.write(html)
+        else:
+            byte = html.encode('utf-8')
+            sys.stdout.buffer.write(byte)
     elif args.format == 'map':
         for x in tree.to_map():
             print(x)

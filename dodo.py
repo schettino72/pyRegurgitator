@@ -1,5 +1,6 @@
 import os
 import glob
+import pathlib
 
 from doitpy.pyflakes import Pyflakes
 from doitpy.coverage import Coverage, PythonPackage
@@ -7,14 +8,28 @@ from doitpy import pypi
 
 
 
-DOIT_CONFIG = {'default_tasks': ['pyflakes', 'doctest']}
+DOIT_CONFIG = {'default_tasks': ['pyflakes', 'test']}
 
 
 def task_pyflakes():
     yield Pyflakes().tasks('*.py')
     yield Pyflakes().tasks('pyreg/**/*.py')
 
+def task_test():
+    """run tests"""
+    yield {
+        'name': 'unit',
+        'actions': ['py.test tests'],
+        'verbosity': 2,
+        }
 
+    for module in ['pyreg/asdlview.py']:
+        yield {
+            'name': 'doctest:' + module,
+            'file_dep': [module],
+            'actions': ['py.test --doctest-modules --color=yes ' + module],
+            'verbosity': 2,
+            }
 
 def task_coverage():
     """show coverage for all modules including tests"""
@@ -23,17 +38,18 @@ def task_coverage():
     yield cov.src()
     yield cov.by_module()
 
-def task_test():
-    """run tests"""
-    for module in ['pyreg/asdlview.py']:
-        yield {
-            'basename': 'doctest',
-            'name': module,
-            'file_dep': [module],
-            'actions': ['py.test --doctest-modules --color=yes ' + module],
-            'verbosity': 2,
-            }
 
+
+
+def _update_dict(d, **kwargs):
+    """little helper to modify and return a dict in one line"""
+    d.update(kwargs)
+    return d
+
+def task_pypi():
+    pkg = pypi.PyPi()
+    yield pkg.manifest_git()
+    yield _update_dict(pkg.sdist(), task_dep=['asdl_json'])
 
 
 #################################################
@@ -96,23 +112,70 @@ def task_regurgitate():
             }
 
         yield {
-            'basename': 'roundtrip',
+            'basename': 'check',
             'name': sample,
             'actions':['diff {} {}'.format(sample, gen_py)],
             'file_dep': [sample, gen_py],
             }
 
 
+def task_roundtrip():
+    """check roundtrip PY -> XML -> PY on all python stdlib files"""
 
+    PATH = '/home/eduardo/work/third_party/cpython/Lib'
 
-############################
+    IGNORE = {
+        # IGNORE
+        'test/badsyntax_3131.py',
+        'test/bad_coding.py',
+        'test/bad_coding2.py',
+        'test/badsyntax_pep3120.py',
+        'test/test_pep3131.py', # get an ERRORTOKEN
 
-def _update_dict(d, **kwargs):
-    """little helper to modify and return a dict in one line"""
-    d.update(kwargs)
-    return d
+        # WONT FIX - not unicode
+        'sqlite3/test/hooks.py',
+        'sqlite3/test/types.py',
+        'sqlite3/test/regression.py',
+        'sqlite3/test/factory.py',
+        'sqlite3/test/userfunctions.py',
+        'sqlite3/test/dbapi.py',
+        'sqlite3/test/transactions.py',
+        'test/encoded_modules/module_iso_8859_1.py',
+        'test/encoded_modules/module_koi8_r.py',
+        'test/test_source_encoding.py',
+        'test/coding20731.py',
 
-def task_pypi():
-    pkg = pypi.PyPi()
-    yield pkg.manifest_git()
-    yield _update_dict(pkg.sdist(), task_dep=['asdl_json'])
+        # WONT FIX - use 2 parenthesis around expression
+        'test/test_itertools.py',
+        'plat-sunos5/IN.py',
+        'plat-sunos5/STROPTS.py',
+        'tkinter/test/test_ttk/test_functions.py',
+        'idlelib/configHelpSourceEdit.py',
+        'idlelib/keybindingDialog.py',
+        'plat-aix4/IN.py',
+
+        # WONT FIX - contains page break
+        'test/test_isinstance.py',
+        'test/test_email/test_asian_codecs.py',
+        'test/test_email/torture_test.py',
+        }
+
+#    for sample in pathlib.Path(PATH).glob('**/*.py'):
+    for sample in pathlib.Path(PATH).glob('*.py'):
+        orig_py = str(sample)
+        rel_path = str(sample.relative_to(PATH))
+
+        if rel_path.startswith('lib2to3/tests/data'):
+            continue # contains python2 code
+        if rel_path.startswith('email'):
+            continue # many files with page break
+        if rel_path in IGNORE:
+            continue
+
+        yield {
+            'name': rel_path,
+            'actions':[
+                "py2xml --check {}".format(orig_py)],
+            'file_dep': [#'pyreg/py2xml.py',
+                         orig_py],
+            }

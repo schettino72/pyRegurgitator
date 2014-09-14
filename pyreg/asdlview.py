@@ -48,13 +48,8 @@ class Type:
         # atributes saved as string unparsed. currently not used
         self.attributes = attributes
         for par in fields:
-            if not par:
-                continue
             parts = par.strip().split(' ')
             self.fields.append(Field(parts[1], parts[0]))
-
-    def __lt__(self, other):
-        return self.name < other.name
 
 
 class Category:
@@ -194,7 +189,7 @@ class ASDL2JSON(ASDL):
         types = {}
         for asdl_type in self.types.values():
             types[asdl_type.name] = self.type_dict(asdl_type)
-        print(json.dumps(types, sort_keys=True, indent=4))
+        return json.dumps(types, sort_keys=True, indent=4)
 
     @staticmethod
     def type_dict(asdl_type):
@@ -274,8 +269,8 @@ class ASDL2HTML(ASDL):
         template = self.jinja_env.get_template("asdl.html")
         cols = {1: ["mod", "stmt", "expr"],
                 2: self.sum_cats + ["product_types", "builtin"]}
-        print(template.render(asdl=self, category_colors=self.css,
-                              columns=cols))
+        return template.render(asdl=self, category_colors=self.css,
+                               columns=cols)
 
 
 
@@ -292,10 +287,10 @@ def asdl_view(args=None):
 
     args = parser.parse_args(args)
     if args.format == 'html':
-        ASDL2HTML(args.asdl_file[0]).render()
+        print(ASDL2HTML(args.asdl_file[0]).render())
     elif args.format == 'json':
-        ASDL2JSON(args.asdl_file[0]).render()
+        print(ASDL2JSON(args.asdl_file[0]).render())
 
 
-if __name__ == "__main__":
+if __name__ == "__main__": # pragma: no cover
     asdl_view()
