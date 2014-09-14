@@ -1,61 +1,85 @@
-================
-pyRegurgitator
-================
-
-Tools for analysing python code.
-
-http://bitbucket.org/schettino72/pyregurgitator/
-
-ASDL links
-
-ftp://ftp.cs.princeton.edu/techreports/1997/554.pdf
-https://github.com/python/cpython/blob/master/Parser/Python.asdl
-
-Features (done)
-================
-
-* asdl2html => reference table of python's ASDL
-
-* ast2html => super pretty print of python source-code's AST
+pyRegurgitator - Tools for analysing python code
+===================================================
 
 
-Install
-=========
-
-$ python setup.py install
-
-
-Usage
+Tools
 =======
 
-As of version 0.1 the only tool available is `ast2html`
+asdlview
+-----------
 
-ast2html
+`asdlview` generates a HTML page with python's ASDL info.
+
+It can also create a JSON file with the ASDL information
+(used by the `astview` tool).
+
+Link XXX
+
+
+astview
 ----------
 
-$ ast2html my_python_module.py
+`astview` generates a HTML page with a python module's AST info.
 
-see http://bitbucket.org/schettino72/pyregurgitator/raw/tip/doc/ast_sample.html for a sample output.
+It can also dumps the AST in text format.
+
+Link XXX
 
 
-Roadmap (TODO)
+py2xml (*Experimental*)
+-------------------------
+
+`py2xml` convert python code to XML.
+
+All source-code text include white-space and comments are preserved.
+The XML can be converted back to python creating the exact same source.
+
+The goal is to use the XML for querying / analysis of the code.
+Perform some transformation/refactoring in the code, and then
+convert it back to python.
+
+As of release 0.2, `py2xml` creates a XML preserving all formating.
+But not much tough was given in creating a XML for easy querying and
+transformation (it mostly follows the AST nodes).
+So the XML format will change completely in future releases.
+
+
+Project Details
 ===============
 
-* project_map I  => display folder/package structure
-
-* project_map II => include import/dependency information
-
-* project_map III => import/dependency checker
-
-* AST -> get all defined names in a module (or another scope)
-
-* doc-tool
-
-* refactoring tool
+- Project management on github - https://github.com/schettino72/pyRegurgitator/
 
 
+license
+=======
 
-License
-=========
+The MIT License
+Copyright (c) 2010-2014 Eduardo Naufel Schettino
 
-The MIT License, see. LICENSE.txt
+see LICENSE file
+
+
+developers / contributors
+==========================
+
+- Eduardo Naufel Schettino
+
+
+install
+=======
+
+::
+
+ $ pip install pyRegurgitator
+
+or download and::
+
+ $ python setup.py install
+
+
+tests
+=======
+
+To run the tests::
+
+  $ py.test

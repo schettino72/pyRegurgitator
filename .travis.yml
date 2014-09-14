@@ -1,0 +1,21 @@
+language: python
+python:
+    - "3.4"
+
+install:
+  - "pip install . --use-mirrors"
+  - pip install -r dev_requirements.txt
+
+branches:
+  only:
+    - master
+    - test
+
+
+script:
+   - doit
+
+notifications:
+    email:
+        on_success: change
+        on_failure: change

@@ -1,7 +1,18 @@
 
 
-0.2.0
-=========
+0.2.0 (*2014-09-15*)
+=====================
 
- - add support for python 3.3
+ - add support for python 3.4
  - drop support for python 2
+ - add tool py2xml
+ - change package name to `pyreg`
+ - renamed tool from `ast2html` to astview
+ - added script for tool `asdlview`
+
+
+0.1.1 (*2010-07-02*)
+======================
+
+ - initial release
+ - tool ast2html

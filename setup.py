@@ -3,9 +3,8 @@
 from setuptools import setup
 
 # use README file as long_description
-readme = open('README')
-long_description = readme.read()
-readme.close()
+with open('README.rst') as readme:
+    long_description = readme.read()
 
 
 setup(name = 'pyRegurgitator',
@@ -14,7 +13,7 @@ setup(name = 'pyRegurgitator',
       license = 'MIT',
       author = 'Eduardo Naufel Schettino',
       author_email = 'schettino72@gmail.com',
-      url = 'http://github.com/schettino72/pyregurgitator/',
+      url = 'http://pythonhosted.org/pyRegurgitator',
       classifiers = ['Development Status :: 3 - Alpha',
                      'Environment :: Console',
                      'Intended Audience :: Developers',
@@ -27,7 +26,7 @@ setup(name = 'pyRegurgitator',
                      ],
 
       packages = ['pyreg'],
-      package_data = {'': ['asdl/*']},
+      package_data = {'': ['asdl/*', 'template/*']},
       install_requires = ['jinja2'],
       long_description = long_description,
       entry_points = {
