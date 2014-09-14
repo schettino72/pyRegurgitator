@@ -18,12 +18,6 @@ class AstField(object):
      * NodeField - contains a single AST element
      * ListField - contains a list of AST elements
     """
-    def line(self):
-        """return line of the first Node"""
-        raise NotImplementedError()
-    def column(self):
-        """return column offset of the first Node"""
-        raise NotImplementedError()
 
 
 class TypeField(AstField):
@@ -51,11 +45,6 @@ class NodeField(AstField):
         self.value = parent.__class__(value, path, lines, parent)
         self.path = path
 
-    def line(self):
-        return self.value.attrs[0][1]
-    def column(self):
-        return self.value.attrs[1][1]
-
     def to_text(self):
         return self.value.to_text()
 
@@ -79,11 +68,6 @@ class ListField(AstField):
                 self.value.append(TypeField(n, path, lines))
         self.path = path
 
-    def line(self):
-        return self.value[0].attrs[0][1]
-    def column(self):
-        return self.value[0].attrs[1][1]
-
     def to_text(self):
         return "[%s]" % ", ".join((n.to_text() for n in self.value))
 
@@ -96,7 +80,8 @@ class ListField(AstField):
 
     def to_html(self):
         t_head = '<table class="field_list">'
-        t_body = "".join(("<tr><td>%s</td></tr>" % n.to_html() for n in self.value))
+        row = "<tr><td>%s</td></tr>"
+        t_body = "".join(row % n.to_html() for n in self.value)
         t_foot = '</table>'
         return t_head + t_body + t_foot
 
@@ -118,14 +103,15 @@ class AstNode(object):
 
 
     @classmethod
-    def tree(cls, filename):
+    def tree(cls, stream, filename):
         """build whole AST from a module"""
-        with open(filename, 'rb') as fp:
-            ct = ast.parse(fp.read(), filename)
-        with open(filename, 'rb') as fp:
-            lines = fp.readlines()
-            cls.line_list = lines
-        return cls(ct, '', [l.decode('utf-8') for l in lines], None)
+        # read file once building the AST nodes
+        ct = ast.parse(stream.read(), filename)
+        # re-wind and read again to save lines information
+        stream.seek(0)
+        lines = stream.readlines()
+        cls.line_list = lines
+        return cls(ct, '', [l for l in lines], None)
 
     @classmethod
     def load_map(cls):
@@ -251,6 +237,7 @@ def ast2html(filename, tree):
 def ast_view(args=None):
     """command line program to convert python module into AST data"""
     import sys
+    import io
     description = """
 Super pretty-printer for python modules's AST(abstract syntax tree)."""
 
@@ -260,13 +247,24 @@ Super pretty-printer for python modules's AST(abstract syntax tree)."""
         choices=('html', 'map', 'txt'), default='html',
         help='output format one of [%(choices)s], default=%(default)s')
     parser.add_argument(
-        'py_file', metavar='MODULE', nargs=1,
-        help='python module')
+        'py_file', metavar='MODULE', nargs='?',
+        help='python module, if not specified uses stdin.')
 
     args = parser.parse_args(args)
-    tree = AstNode.tree(args.py_file[0])
+
+    # create node tree.
+    if args.py_file:
+        filename = args.py_file
+        with open(args.py_file, 'r') as fp:
+            tree = AstNode.tree(fp, args.py_file)
+    else:
+        filename = '<stdin>'
+        # must first create StringIO because stream must be read twice
+        fp = io.StringIO(sys.stdin.buffer.read().decode('utf-8'))
+        tree = AstNode.tree(fp, filename)
+
     if args.format == 'html':
-        html = ast2html(args.py_file[0], tree)
+        html = ast2html(filename, tree)
         sys.stdout.buffer.write(html.encode('utf8'))
     elif args.format == 'map':
         for x in tree.to_map():

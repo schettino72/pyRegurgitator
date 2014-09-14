@@ -1,4 +1,5 @@
-
+import sys
+import io
 import argparse
 from tokenize import tokenize
 import tokenize as Token
@@ -82,11 +83,11 @@ class AstNodeX(AstNode):
 
         # AST node shows column in as byte position,
         # convert to char position in unicode string
-        line_byte = self.line_list[self.line-1]
+        line_uni = self.line_list[self.line-1]
         try:
-            line_uni = line_byte.decode('utf-8')
-        except:
-            raise Exception(line_byte)
+            line_byte = line_uni.encode('utf-8')
+        except: # pragma: no cover
+            raise Exception(line_uni)
         if len(line_byte) != len(line_uni):
             column = pos_byte2str(line_uni)[self.column]
         else:
@@ -1368,14 +1369,31 @@ class SrcToken:
         parent_ele.appendChild(DOM.Text(text))
 
 
-def py2xml(filename):
+def py2xml(filename=None, fromstring=None):
     """convert ast to srcML"""
     AstNodeX.load_map()
-    ast_root = AstNodeX.tree(filename)
-    with open(filename, 'rb') as fp:
-        AstNodeX.tokens = SrcToken(fp)
-    root = ast_root.to_xml()
 
+    if fromstring:
+        filename = '<str>'
+        _bytep = io.BytesIO(fromstring.encode('utf-8'))
+        _strp = io.StringIO(fromstring)
+        ast_root = AstNodeX.tree(_strp, filename)
+        AstNodeX.tokens = SrcToken(_bytep)
+    elif filename:
+        with open(filename, 'r') as fp:
+            filep = io.StringIO(fp.read())
+        ast_root = AstNodeX.tree(filep, filename)
+
+        with open(filename, 'rb') as bs:
+            AstNodeX.tokens = SrcToken(bs)
+    else:
+        filename = '<stdin>'
+        _bytep = io.BytesIO(sys.stdin.buffer.read())
+        _strp = io.StringIO(_bytep.getvalue().decode('utf-8'))
+        ast_root = AstNodeX.tree(_strp, filename)
+        AstNodeX.tokens = SrcToken(_bytep)
+
+    root = ast_root.to_xml()
     # add remaining text at the end of the file
     ast_root.tokens.write_non_ast_tokens(root)
 
@@ -1388,28 +1406,30 @@ def xml2py(filename):
 
     To convert back, just get all text from all nodes.
     """
-    with open(filename) as fp_in:
-        root = ET.fromstring(fp_in.read())
-        return ET.tostring(root, encoding='unicode', method='text')
+    if filename:
+        with open(filename) as fp_in:
+            root = ET.fromstring(fp_in.read())
+    else:
+        root = ET.fromstring(sys.stdin.buffer.read())
+    return ET.tostring(root, encoding='unicode', method='text')
 
 
-def main(args=None): # pragma: no cover
+def main(args=None):
     """command line program for py2xml"""
-    import sys
     description = """convert python module to XML representation"""
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('-r', '--reverse', dest='reverse',
                         action='store_true',
                         help='reverse - convert XML back to python code')
     parser.add_argument(
-        'py_file', metavar='MODULE', nargs=1,
-        help='python module')
+        'py_file', metavar='MODULE', nargs='?',
+        help='python module, if not specified uses stdin.')
 
     args = parser.parse_args(args)
     if args.reverse:
-        sys.stdout.buffer.write(xml2py(args.py_file[0]).encode('utf8'))
+        sys.stdout.buffer.write(xml2py(args.py_file).encode('utf8'))
     else:
-        sys.stdout.buffer.write(py2xml(args.py_file[0]).encode('utf8'))
+        sys.stdout.buffer.write(py2xml(args.py_file).encode('utf8'))
 
 
 if __name__ == "__main__": # pragma: no cover
