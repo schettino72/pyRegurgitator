@@ -1369,6 +1369,7 @@ class SrcToken:
         parent_ele.appendChild(DOM.Text(text))
 
 
+
 def py2xml(filename=None, fromstring=None):
     """convert ast to srcML"""
     AstNodeX.load_map()
@@ -1401,33 +1402,65 @@ def py2xml(filename=None, fromstring=None):
     return root.toxml()
 
 
-def xml2py(filename):
+
+def xml2py(filename=None, fromstring=None):
     """convert XML back to python
 
     To convert back, just get all text from all nodes.
     """
-    if filename:
-        with open(filename) as fp_in:
-            root = ET.fromstring(fp_in.read())
+    if fromstring:
+        xml_str = fromstring
     else:
-        root = ET.fromstring(sys.stdin.buffer.read())
+        if filename:
+            with open(filename) as fp_in:
+                xml_str = fp_in.read()
+        else:
+            xml_str = sys.stdin.buffer.read()
+
+    root = ET.fromstring(xml_str)
     return ET.tostring(root, encoding='unicode', method='text')
+
 
 
 def main(args=None):
     """command line program for py2xml"""
+    import difflib
+
     description = """convert python module to XML representation"""
     parser = argparse.ArgumentParser(description=description)
     parser.add_argument('-r', '--reverse', dest='reverse',
                         action='store_true',
                         help='reverse - convert XML back to python code')
     parser.add_argument(
+        '-c', '--check', dest='check',
+        action='store_true',
+        help='display the diff between original file and the roundtrip version')
+    parser.add_argument(
         'py_file', metavar='MODULE', nargs='?',
         help='python module, if not specified uses stdin.')
 
     args = parser.parse_args(args)
-    if args.reverse:
+
+    # DIFF
+    if args.check:
+        original = open(args.py_file).read()
+        roundtriped = xml2py(fromstring=py2xml(args.py_file))
+        diff = difflib.unified_diff(
+            original.splitlines(),
+            roundtriped.splitlines(),
+            lineterm='', fromfile='args.py_file')
+
+        failed = 0
+        for line in diff:
+            failed = 1
+            print(line)
+        sys.exit(failed)
+
+    # XML -> PY
+    elif args.reverse:
         sys.stdout.buffer.write(xml2py(args.py_file).encode('utf8'))
+
+    # PY -> XML
     else:
         sys.stdout.buffer.write(py2xml(args.py_file).encode('utf8'))
 
