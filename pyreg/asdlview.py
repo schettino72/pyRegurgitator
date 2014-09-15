@@ -282,14 +282,14 @@ def asdl_view(args=None):
         choices=('html', 'json'), default='html',
         help='output format one of [%(choices)s], default=%(default)s')
     parser.add_argument(
-        'asdl_file', metavar='ASDL', nargs=1,
+        'asdl_file', metavar='ASDL', nargs='?',
         help='ASDL file')
 
     args = parser.parse_args(args)
     if args.format == 'html':
-        print(ASDL2HTML(args.asdl_file[0]).render())
+        print(ASDL2HTML(args.asdl_file).render())
     elif args.format == 'json':
-        print(ASDL2JSON(args.asdl_file[0]).render())
+        print(ASDL2JSON(args.asdl_file).render())
 
 
 if __name__ == "__main__": # pragma: no cover

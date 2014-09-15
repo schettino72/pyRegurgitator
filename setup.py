@@ -26,7 +26,7 @@ setup(name = 'pyRegurgitator',
                      ],
 
       packages = ['pyreg'],
-      package_data = {'': ['asdl/*', 'template/*']},
+      package_data = {'': ['asdl/*', 'templates/*']},
       install_requires = ['jinja2'],
       long_description = long_description,
       entry_points = {

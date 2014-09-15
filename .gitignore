@@ -4,6 +4,7 @@ __pycache__
 .doit.db*
 .coverage
 doc/_build
+doc/_sample
 MANIFEST
 dist
 
