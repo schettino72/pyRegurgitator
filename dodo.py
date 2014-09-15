@@ -96,6 +96,7 @@ def task_pypi():
     pkg = pypi.PyPi()
     yield pkg.manifest_git()
     yield _update_dict(pkg.sdist(), task_dep=['asdl_json'])
+    yield _update_dict(pkg.sdist_upload(), task_dep=['asdl_json'])
 
 
 #################################################
