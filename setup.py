@@ -9,7 +9,7 @@ with open('README.rst') as readme:
 
 setup(name = 'pyRegurgitator',
       description = 'pyRegurgitator - Tools for analysing python code',
-      version = '0.2.dev0',
+      version = '0.2.0',
       license = 'MIT',
       author = 'Eduardo Naufel Schettino',
       author_email = 'schettino72@gmail.com',
