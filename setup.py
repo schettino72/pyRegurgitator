@@ -9,7 +9,7 @@ with open('README.rst') as readme:
 
 setup(name = 'pyRegurgitator',
       description = 'pyRegurgitator - Tools for analysing python code',
-      version = '0.2.0',
+      version = '0.2.1',
       license = 'MIT',
       author = 'Eduardo Naufel Schettino',
       author_email = 'schettino72@gmail.com',
@@ -26,6 +26,7 @@ setup(name = 'pyRegurgitator',
                      ],
 
       packages = ['pyreg'],
+      package_data = {'': ['asdl/*', 'templates/*', ]},
       install_requires = ['jinja2'],
       long_description = long_description,
       entry_points = {
